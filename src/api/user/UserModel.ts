@@ -1,0 +1,453 @@
+import bcryptjs from 'bcryptjs';
+import Joi from 'joi';
+import { PoolConnection } from 'mysql2/promise';
+import dayjs from 'dayjs';
+import generateId from '../../util/generate-id.js';
+import pool, { execQuery } from '../../util/database.js';
+
+const { compareSync, hashSync } = bcryptjs;
+
+export const PASSWORD_SALT_ROUNDS: number = 12;
+export const PASSWORD_MIN_LENGTH: number = 5;
+export const MAX_LOGIN_ATTEMPTS: number = 5;
+export const LOGIN_TIMEOUT_LENGTH: number = 900;
+
+export default class User {
+  userId: string | null = null;
+
+  username: string | null = null;
+
+  email: string | null = null;
+
+  password: string | null = null;
+
+  passwordIsExpired: boolean = false;
+
+  firstName: string | null = null;
+
+  lastName: string | null = null;
+
+  homePage: string | null = 'dashboard';
+
+  hasActiveSession: boolean = false;
+
+  lastToken: string | null = null;
+
+  tokenExpires: string | null = null;
+
+  loginAttemptCount: number = 0;
+
+  lastLoginAttemptAt: string | null = null;
+
+  lifetimeLoginCount: number = 0;
+
+  isInactive: boolean = false;
+
+  roles: (string | null)[] = [];
+
+  isValid: boolean = false;
+
+  // prettier-ignore
+  schema: Joi.ObjectSchema = Joi.object({
+    username: Joi
+      .string()
+      .label('Username')
+      .alphanum()
+      .trim()
+      .min(2)
+      .max(255)
+      .required(),
+    email: Joi
+      .string()
+      .label('Email')
+      .email()
+      .trim()
+      .required(),
+    password: Joi
+      .string()
+      .label('Password')
+      .allow(null)
+      .allow('')
+      .min(PASSWORD_MIN_LENGTH)
+      .required(),
+    passwordConfirm: Joi
+      .string()
+      .label('Password Confirmation')
+      .allow(null)
+      .allow('')
+      .min(PASSWORD_MIN_LENGTH)
+      .required(),
+    passwordIsExpired: Joi
+      .boolean()
+      .label('Password is expired')
+      .required(),
+    firstName: Joi
+      .string()
+      .label('First Name')
+      .trim()
+      .min(1)
+      .max(50)
+      .required(),
+    lastName: Joi
+      .string()
+      .label('Last Name')
+      .trim()
+      .min(1)
+      .max(50)
+      .required(),
+    homePage: Joi
+      .string()
+      .label('Home Page')
+      .trim()
+      .min(1)
+      .max(255)
+      .required(),
+    isInactive: Joi
+      .boolean()
+      .label('Inactive')
+      .required(),
+    roles: Joi.array()
+      .label('Roles')
+      .items(
+        Joi.string().guid({
+          version: ['uuidv7'],
+        })
+      )
+      .required(),
+  });
+
+  constructor(properties: object = {}) {
+    Object.assign(this, properties);
+  }
+
+  static async readAll(): Promise<object[]> {
+    const query = `
+      SELECT
+        userId,
+        username,
+        email,
+        firstName,
+        lastName,
+        IF(tokenExpires AND tokenExpires > NOW(), 1, 0) AS hasActiveSession,
+        isInactive
+      FROM
+        users
+      ORDER BY
+        firstName
+    `;
+    const [rows] = await execQuery(query);
+    return rows.map((row: Record<string, unknown>) => {
+      row.hasActiveSession = !!row.hasActiveSession;
+      row.isInactive = !!row.isInactive;
+      return row;
+    });
+  }
+
+  async read(readByUsername: boolean = false): Promise<boolean> {
+    const query = `
+      SELECT
+        *
+      FROM
+        users
+      WHERE
+        ${readByUsername ? 'username' : 'userId'} = ?
+    `;
+    const values = [readByUsername ? this.username : this.userId];
+    const [rows] = await execQuery(query, values);
+    if (rows.length === 1) {
+      rows[0].passwordIsExpired = !!rows[0].passwordIsExpired;
+      rows[0].hasActiveSession = !!rows[0].hasActiveSession;
+      rows[0].isInactive = !!rows[0].isInactive;
+      Object.assign(this, rows[0]);
+      this.roles = await this.readRoles();
+      this.isValid = true;
+      return true;
+    }
+    this.isValid = false;
+    return false;
+  }
+
+  async readRoles(): Promise<string[]> {
+    const query = `
+      SELECT
+        roleId
+      FROM
+        userRoles
+      WHERE
+        userId = ?
+    `;
+    const values = [this.userId];
+    const [rows] = await execQuery(query, values);
+    return rows.map((row: Record<string, string>) => row.roleId);
+  }
+
+  async validate(values: object): Promise<object[]> {
+    const errors: object[] = [];
+    const { error, value } = this.schema.validate(values, {
+      abortEarly: false,
+      stripUnknown: true,
+    });
+    if (error) {
+      error.details.forEach((err: Joi.ValidationErrorItem) => {
+        errors.push({ field: err.context?.key, message: err.message });
+      });
+    } else {
+      if (!this.isValid && !value.password) {
+        errors.push({ field: 'password', message: 'Missing password' });
+      } else if (
+        value.password &&
+        value.password.length < PASSWORD_MIN_LENGTH
+      ) {
+        errors.push({
+          field: 'password',
+          message: `Password must be at least ${PASSWORD_MIN_LENGTH} characters`,
+        });
+      } else if (value.password !== value.passwordConfirm) {
+        errors.push({
+          field: 'passwordConfirm',
+          message: 'Passwords do not match',
+        });
+      } else if (value.password) {
+        this.setPassword(value.password);
+      }
+      delete value.password;
+      Object.assign(this, value);
+    }
+    if (!(await this.isUnique())) {
+      errors.push({ field: 'username', message: '"Username" already in use' });
+    }
+    return errors;
+  }
+
+  async create(): Promise<void> {
+    this.userId ??= generateId();
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const query = `
+        INSERT INTO
+          users (
+            userId,
+            username,
+            email,
+            password,
+            passwordIsExpired,
+            firstName,
+            lastName,
+            homePage,
+            isInactive
+          )
+        VALUES
+          ?
+      `;
+      const values = [
+        this.userId,
+        this.username,
+        this.email,
+        this.password,
+        this.passwordIsExpired,
+        this.firstName,
+        this.lastName,
+        this.homePage,
+        this.isInactive,
+      ];
+      await conn.query(query, [[values]]);
+      await this.setRoles(conn);
+      await conn.commit();
+      await this.read();
+    } catch (err: unknown) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
+
+  async update(): Promise<void> {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const query = `
+        UPDATE
+          users
+        SET
+          username = ?,
+          email = ?,
+          password = ?,
+          passwordIsExpired = ?,
+          firstName = ?,
+          lastName = ?,
+          homePage = ?,
+          lastToken = ?,
+          tokenExpires = ?,
+          loginAttemptCount = ?,
+          lastLoginAttemptAt = ?,
+          lifetimeLoginCount = ?,
+          isInactive = ?
+        WHERE
+          userId = ?
+      `;
+      const values = [
+        this.username,
+        this.email,
+        this.password,
+        this.passwordIsExpired,
+        this.firstName,
+        this.lastName,
+        this.homePage,
+        this.lastToken,
+        this.tokenExpires,
+        this.loginAttemptCount,
+        this.lastLoginAttemptAt,
+        this.lifetimeLoginCount,
+        this.isInactive,
+        this.userId,
+      ];
+      await conn.query(query, values);
+      await this.setRoles(conn);
+      await conn.commit();
+      await this.read();
+    } catch (err: unknown) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
+
+  async delete(): Promise<void> {
+    const query = `
+      DELETE FROM
+        users
+      WHERE
+        userId = ?
+    `;
+    const values = [this.userId];
+    await execQuery(query, values);
+  }
+
+  async isUnique(): Promise<boolean> {
+    let query = `
+      SELECT
+        1
+      FROM
+        users
+      WHERE
+        username = ?
+    `;
+    const values = [this.username];
+    if (this.userId) {
+      query += ' AND userId <> ?';
+      values.push(this.userId);
+    }
+    const [rows] = await execQuery(query, values);
+    return !rows.length;
+  }
+
+  async validateRoles(): Promise<boolean> {
+    const query = `
+      SELECT
+        roleId
+      FROM
+        roles
+    `;
+    const [rows] = await execQuery(query);
+    return this.roles.every((value) =>
+      rows.map((row: Record<string, unknown>) => row.roleId).includes(value)
+    );
+  }
+
+  async deleteRoles(conn: PoolConnection): Promise<void> {
+    const query = `
+      DELETE FROM
+        userRoles
+      WHERE
+        userId = ?
+    `;
+    const values = [this.userId];
+    await conn.query(query, values);
+  }
+
+  async insertRoles(conn: PoolConnection): Promise<void> {
+    const query = `
+      INSERT INTO
+        userRoles (
+          userId,
+          roleId
+        )
+      VALUES
+        ?
+    `;
+    const values = [this.roles.map((roleId) => [this.userId, roleId])];
+    await conn.query(query, values);
+  }
+
+  async setRoles(conn: PoolConnection): Promise<void> {
+    if (await this.validateRoles()) {
+      await this.deleteRoles(conn);
+      if (this.roles.length) {
+        await this.insertRoles(conn);
+      }
+    }
+  }
+
+  async readRoleNames(): Promise<string[]> {
+    const query = `
+      SELECT
+        name
+      FROM
+        userRoles u
+      LEFT JOIN
+        roles r
+      ON
+        u.roleId = r.roleId
+      WHERE
+        userId = ?
+    `;
+    const values = [this.userId];
+    const [rows] = await execQuery(query, values);
+    return rows.map((row: Record<string, string>) => row.name);
+  }
+
+  setPassword(password: string): void {
+    this.password = hashSync(password, PASSWORD_SALT_ROUNDS);
+  }
+
+  verifyPassword(password: string): boolean {
+    if (!this.password) {
+      return false;
+    }
+    return compareSync(password, this.password);
+  }
+
+  isLockedOut(): boolean {
+    if (!this.lastLoginAttemptAt) {
+      return false;
+    }
+    const duration = dayjs().diff(this.lastLoginAttemptAt, 'second');
+    return (
+      this.loginAttemptCount >= MAX_LOGIN_ATTEMPTS &&
+      duration < LOGIN_TIMEOUT_LENGTH
+    );
+  }
+
+  forClient(): object {
+    return JSON.parse(
+      JSON.stringify({
+        userId: this.userId,
+        username: this.username,
+        email: this.email,
+        passwordIsExpired: this.passwordIsExpired,
+        firstName: this.firstName,
+        lastName: this.lastName,
+        homePage: this.homePage,
+        hasActiveSession: this.hasActiveSession,
+        tokenExpires: this.tokenExpires,
+        lastLoginAttemptAt: this.lastLoginAttemptAt,
+        lifetimeLoginCount: this.lifetimeLoginCount,
+        isInactive: this.isInactive,
+        roles: this.roles,
+      })
+    );
+  }
+}
