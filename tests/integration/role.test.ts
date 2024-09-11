@@ -1,7 +1,7 @@
 import { afterAll, afterEach, describe, it, expect } from 'vitest';
 import supertest from 'supertest';
 import { mockDatabase, mockRole, mockSession, resetDatabase } from '../mock.js';
-import app from '../../src/app.js';
+import app from '../../src/util/express.js';
 import { execQuery, initPool } from '../../src/util/database.js';
 import Role from '../../src/api/role/RoleModel.js';
 import Permission from '../../src/util/permission.js';

@@ -1,7 +1,7 @@
 import { execQuery } from '../../util/database.js';
 
 export const AUDIT_FIELD_BLACKLIST = ['roles'];
-export const MODEL_CHANGE_BLACKLIST = ['password'];
+export const MODEL_CHANGE_BLACKLIST = ['lastToken', 'tokenExpires'];
 export const MODEL_CHANGE_CENSORED = ['password'];
 export const CENSOR_STRING = '*****';
 

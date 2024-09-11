@@ -2,7 +2,7 @@ import { afterAll, afterEach, describe, it, expect } from 'vitest';
 import supertest from 'supertest';
 import dayjs from 'dayjs';
 import { mockDatabase, mockUser, resetDatabase } from '../mock.js';
-import app from '../../src/app.js';
+import app from '../../src/util/express.js';
 import { execQuery, initPool } from '../../src/util/database.js';
 import {
   MAX_LOGIN_ATTEMPTS,
