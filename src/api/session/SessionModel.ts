@@ -1,10 +1,11 @@
 import dayjs from 'dayjs';
 import generateId from '../../util/generate-id.js';
 import { execQuery } from '../../util/database.js';
+import { RowDataPacket } from 'mysql2/promise';
 
 const SESSION_TIMEOUT_LENGTH = 900;
 
-const generateExpiration = () =>
+export const generateExpiration = () =>
   dayjs().add(SESSION_TIMEOUT_LENGTH, 'second').format('YYYY-MM-DD HH:mm:ss');
 
 export default class Session {
@@ -30,11 +31,11 @@ export default class Session {
 
   isValid: boolean = false;
 
-  constructor(properties: object = {}) {
+  constructor(properties = {}) {
     Object.assign(this, properties);
   }
 
-  async read(touch: boolean = true): Promise<boolean> {
+  async read(touch = true) {
     if (!this.lastToken) {
       this.isValid = false;
       return false;
@@ -60,7 +61,7 @@ export default class Session {
         tokenExpires > NOW()
     `;
     const values = [this.lastToken];
-    const [rows] = await execQuery(query, values);
+    const [rows] = await execQuery<RowDataPacket[]>(query, values);
     if (rows.length === 1) {
       if (touch) {
         this.userId = rows[0].userId;
@@ -78,7 +79,7 @@ export default class Session {
     return false;
   }
 
-  async readPermissions(): Promise<string[]> {
+  async readPermissions() {
     const query = `
       SELECT
         permission
@@ -94,11 +95,11 @@ export default class Session {
         permission
     `;
     const values = [this.userId];
-    const [rows] = await execQuery(query, values);
-    return rows.map((row: Record<string, string>) => row.permission);
+    const [rows] = await execQuery<RowDataPacket[]>(query, values);
+    return rows.map((row) => row.permission);
   }
 
-  async create(): Promise<void> {
+  async create() {
     if (!this.userId) {
       return;
     }
@@ -107,7 +108,7 @@ export default class Session {
     await this.read();
   }
 
-  async touch(): Promise<void> {
+  async touch() {
     this.tokenExpires = generateExpiration();
     const query = `
       UPDATE
@@ -122,7 +123,7 @@ export default class Session {
     await execQuery(query, values);
   }
 
-  async delete(): Promise<void> {
+  async delete() {
     const query = `
       UPDATE
         users
@@ -136,11 +137,11 @@ export default class Session {
     await execQuery(query, values);
   }
 
-  hasPermission(permission: string): boolean {
+  hasPermission(permission: string) {
     return this.permissions.includes(permission);
   }
 
-  forClient(): object {
+  forClient() {
     return JSON.parse(
       JSON.stringify({
         lastToken: this.lastToken,

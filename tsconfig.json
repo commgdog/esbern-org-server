@@ -12,6 +12,8 @@
   "exclude": [
     "tests",
     "node_modules",
-    "build"
+    "build",
+    "vitest.config.ts",
+    "vitest.setup.ts"
   ],
 }

@@ -1,4 +1,4 @@
-import winston, { Logger, format } from 'winston';
+import winston, { format } from 'winston';
 
 const logFormat = format.combine(
   format.timestamp({ format: 'YYYY-MM-DD[T]HH:mm:ss.SSS[Z]ZZ' }),
@@ -7,7 +7,7 @@ const logFormat = format.combine(
   )
 );
 
-const logger: Logger = winston.createLogger({
+const logger = winston.createLogger({
   format: logFormat,
 });
 

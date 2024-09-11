@@ -1,14 +1,14 @@
 import { NextFunction, Request, Response } from 'express';
 import Audit from './AuditModel.js';
 
-const readAudits = async (req: Request, res: Response, next: NextFunction) => {
+export default async (req: Request, res: Response, next: NextFunction) => {
   try {
-    return res
-      .status(200)
-      .json(await Audit.getAudits(req.params.modelType, req.params.modelId));
-  } catch (err: unknown) {
+    const { modelType, modelId } = req.params;
+    if (!modelType || !modelId) {
+      return res.status(400).json({ message: 'Missing parameters' });
+    }
+    return res.status(200).json(await Audit.getAudits(modelType, modelId));
+  } catch (err) {
     return next(err);
   }
 };
-
-export default readAudits;

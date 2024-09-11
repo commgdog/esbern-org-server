@@ -1,10 +1,10 @@
 import { NextFunction, Request, Response } from 'express';
 import { PoolConnection } from 'mysql2/promise';
 import dayjs from 'dayjs';
-import db from '../util/database.js';
+import { getConnection } from '../util/database.js';
 import logger from '../util/logger.js';
-import { Audit } from './set-auditor.js';
 import generateId from '../util/generate-id.js';
+import { IAudit } from '../api/audit/AuditModel.js';
 
 export default (req: Request, res: Response, next: NextFunction) => {
   const start = process.hrtime.bigint();
@@ -55,7 +55,7 @@ export default (req: Request, res: Response, next: NextFunction) => {
         ?
     `;
     const insert: (string | null)[][] = [];
-    req.auditor.audits.forEach((audit: Audit) => {
+    req.auditor.audits.forEach((audit: IAudit) => {
       insert.push([
         generateId(),
         req.requestId,
@@ -70,13 +70,13 @@ export default (req: Request, res: Response, next: NextFunction) => {
     }
   };
   res.on('finish', async () => {
-    const conn = await db.getConnection();
+    const conn = await getConnection();
     try {
       await conn.beginTransaction();
       await logRequest(conn);
       await logAudits(conn);
       await conn.commit();
-    } catch (err: unknown) {
+    } catch (err) {
       await conn.rollback();
       logger.error(err);
     } finally {

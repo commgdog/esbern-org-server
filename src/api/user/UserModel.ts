@@ -1,9 +1,9 @@
 import bcryptjs from 'bcryptjs';
 import Joi from 'joi';
-import { PoolConnection } from 'mysql2/promise';
+import { PoolConnection, RowDataPacket } from 'mysql2/promise';
 import dayjs from 'dayjs';
 import generateId from '../../util/generate-id.js';
-import pool, { execQuery } from '../../util/database.js';
+import { execQuery, getConnection } from '../../util/database.js';
 
 const { compareSync, hashSync } = bcryptjs;
 
@@ -116,11 +116,11 @@ export default class User {
       .required(),
   });
 
-  constructor(properties: object = {}) {
+  constructor(properties = {}) {
     Object.assign(this, properties);
   }
 
-  static async readAll(): Promise<object[]> {
+  static async readAll() {
     const query = `
       SELECT
         userId,
@@ -135,15 +135,15 @@ export default class User {
       ORDER BY
         firstName
     `;
-    const [rows] = await execQuery(query);
-    return rows.map((row: Record<string, unknown>) => {
+    const [rows] = await execQuery<RowDataPacket[]>(query);
+    return rows.map((row) => {
       row.hasActiveSession = !!row.hasActiveSession;
       row.isInactive = !!row.isInactive;
       return row;
     });
   }
 
-  async read(readByUsername: boolean = false): Promise<boolean> {
+  async read(readByUsername: boolean = false) {
     const query = `
       SELECT
         *
@@ -153,7 +153,7 @@ export default class User {
         ${readByUsername ? 'username' : 'userId'} = ?
     `;
     const values = [readByUsername ? this.username : this.userId];
-    const [rows] = await execQuery(query, values);
+    const [rows] = await execQuery<RowDataPacket[]>(query, values);
     if (rows.length === 1) {
       rows[0].passwordIsExpired = !!rows[0].passwordIsExpired;
       rows[0].hasActiveSession = !!rows[0].hasActiveSession;
@@ -167,7 +167,7 @@ export default class User {
     return false;
   }
 
-  async readRoles(): Promise<string[]> {
+  async readRoles() {
     const query = `
       SELECT
         roleId
@@ -177,11 +177,11 @@ export default class User {
         userId = ?
     `;
     const values = [this.userId];
-    const [rows] = await execQuery(query, values);
-    return rows.map((row: Record<string, string>) => row.roleId);
+    const [rows] = await execQuery<RowDataPacket[]>(query, values);
+    return rows.map((row) => row.roleId);
   }
 
-  async validate(values: object): Promise<object[]> {
+  async validate(values: object) {
     const errors: object[] = [];
     const { error, value } = this.schema.validate(values, {
       abortEarly: false,
@@ -219,9 +219,9 @@ export default class User {
     return errors;
   }
 
-  async create(): Promise<void> {
+  async create() {
     this.userId ??= generateId();
-    const conn = await pool.getConnection();
+    const conn = await getConnection();
     try {
       await conn.beginTransaction();
       const query = `
@@ -235,6 +235,11 @@ export default class User {
             firstName,
             lastName,
             homePage,
+            lastToken,
+            tokenExpires,
+            loginAttemptCount,
+            lastLoginAttemptAt,
+            lifetimeLoginCount,
             isInactive
           )
         VALUES
@@ -249,13 +254,18 @@ export default class User {
         this.firstName,
         this.lastName,
         this.homePage,
+        this.lastToken,
+        this.tokenExpires,
+        this.loginAttemptCount,
+        this.lastLoginAttemptAt,
+        this.lifetimeLoginCount,
         this.isInactive,
       ];
       await conn.query(query, [[values]]);
       await this.setRoles(conn);
       await conn.commit();
       await this.read();
-    } catch (err: unknown) {
+    } catch (err) {
       await conn.rollback();
       throw err;
     } finally {
@@ -263,8 +273,8 @@ export default class User {
     }
   }
 
-  async update(): Promise<void> {
-    const conn = await pool.getConnection();
+  async update() {
+    const conn = await getConnection();
     try {
       await conn.beginTransaction();
       const query = `
@@ -307,7 +317,7 @@ export default class User {
       await this.setRoles(conn);
       await conn.commit();
       await this.read();
-    } catch (err: unknown) {
+    } catch (err) {
       await conn.rollback();
       throw err;
     } finally {
@@ -315,7 +325,7 @@ export default class User {
     }
   }
 
-  async delete(): Promise<void> {
+  async delete() {
     const query = `
       DELETE FROM
         users
@@ -326,7 +336,7 @@ export default class User {
     await execQuery(query, values);
   }
 
-  async isUnique(): Promise<boolean> {
+  async isUnique() {
     let query = `
       SELECT
         1
@@ -340,24 +350,24 @@ export default class User {
       query += ' AND userId <> ?';
       values.push(this.userId);
     }
-    const [rows] = await execQuery(query, values);
+    const [rows] = await execQuery<RowDataPacket[]>(query, values);
     return !rows.length;
   }
 
-  async validateRoles(): Promise<boolean> {
+  async validateRoles() {
     const query = `
       SELECT
         roleId
       FROM
         roles
     `;
-    const [rows] = await execQuery(query);
+    const [rows] = await execQuery<RowDataPacket[]>(query);
     return this.roles.every((value) =>
-      rows.map((row: Record<string, unknown>) => row.roleId).includes(value)
+      rows.map((row) => row.roleId).includes(value)
     );
   }
 
-  async deleteRoles(conn: PoolConnection): Promise<void> {
+  async deleteRoles(conn: PoolConnection) {
     const query = `
       DELETE FROM
         userRoles
@@ -368,7 +378,7 @@ export default class User {
     await conn.query(query, values);
   }
 
-  async insertRoles(conn: PoolConnection): Promise<void> {
+  async insertRoles(conn: PoolConnection) {
     const query = `
       INSERT INTO
         userRoles (
@@ -382,7 +392,7 @@ export default class User {
     await conn.query(query, values);
   }
 
-  async setRoles(conn: PoolConnection): Promise<void> {
+  async setRoles(conn: PoolConnection) {
     if (await this.validateRoles()) {
       await this.deleteRoles(conn);
       if (this.roles.length) {
@@ -391,7 +401,7 @@ export default class User {
     }
   }
 
-  async readRoleNames(): Promise<string[]> {
+  async readRoleNames() {
     const query = `
       SELECT
         name
@@ -405,22 +415,22 @@ export default class User {
         userId = ?
     `;
     const values = [this.userId];
-    const [rows] = await execQuery(query, values);
+    const [rows] = await execQuery<RowDataPacket[]>(query, values);
     return rows.map((row: Record<string, string>) => row.name);
   }
 
-  setPassword(password: string): void {
+  setPassword(password: string) {
     this.password = hashSync(password, PASSWORD_SALT_ROUNDS);
   }
 
-  verifyPassword(password: string): boolean {
+  verifyPassword(password: string) {
     if (!this.password) {
       return false;
     }
     return compareSync(password, this.password);
   }
 
-  isLockedOut(): boolean {
+  isLockedOut() {
     if (!this.lastLoginAttemptAt) {
       return false;
     }
@@ -431,23 +441,21 @@ export default class User {
     );
   }
 
-  forClient(): object {
-    return JSON.parse(
-      JSON.stringify({
-        userId: this.userId,
-        username: this.username,
-        email: this.email,
-        passwordIsExpired: this.passwordIsExpired,
-        firstName: this.firstName,
-        lastName: this.lastName,
-        homePage: this.homePage,
-        hasActiveSession: this.hasActiveSession,
-        tokenExpires: this.tokenExpires,
-        lastLoginAttemptAt: this.lastLoginAttemptAt,
-        lifetimeLoginCount: this.lifetimeLoginCount,
-        isInactive: this.isInactive,
-        roles: this.roles,
-      })
-    );
+  forClient() {
+    return {
+      userId: this.userId,
+      username: this.username,
+      email: this.email,
+      passwordIsExpired: this.passwordIsExpired,
+      firstName: this.firstName,
+      lastName: this.lastName,
+      homePage: this.homePage,
+      hasActiveSession: this.hasActiveSession,
+      tokenExpires: this.tokenExpires,
+      lastLoginAttemptAt: this.lastLoginAttemptAt,
+      lifetimeLoginCount: this.lifetimeLoginCount,
+      isInactive: this.isInactive,
+      roles: this.roles,
+    };
   }
 }

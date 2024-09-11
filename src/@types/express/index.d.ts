@@ -1,7 +1,3 @@
-// noinspection JSUnusedGlobalSymbols
-import Session from '../../api/session/SessionModel.js';
-import { Auditor } from '../../middleware/set-auditor.js';
-
 export {};
 
 declare global {

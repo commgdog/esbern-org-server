@@ -1,12 +1,85 @@
 import { execQuery } from '../../util/database.js';
 
 export const AUDIT_FIELD_BLACKLIST = ['roles'];
+export const MODEL_CHANGE_BLACKLIST = ['password'];
+export const MODEL_CHANGE_CENSORED = ['password'];
+export const CENSOR_STRING = '*****';
+
+export interface IModelChangeRow {
+  field: string;
+  before: unknown;
+  after: unknown;
+}
+
+export class ModelChange {
+  before: Record<string, unknown> = {};
+
+  after: Record<string, unknown> = {};
+
+  constructor(before: Record<string, unknown>) {
+    this.before = before;
+  }
+
+  getChanges() {
+    const fields = Object.keys(this.before);
+    const changes: IModelChangeRow[] = [];
+    fields.forEach((field: string) => {
+      if (MODEL_CHANGE_BLACKLIST.includes(field)) {
+        return;
+      }
+      if (
+        JSON.stringify(this.before[field]) !== JSON.stringify(this.after[field])
+      ) {
+        changes.push({
+          field,
+          before: MODEL_CHANGE_CENSORED.includes(field)
+            ? CENSOR_STRING
+            : this.before[field],
+          after: MODEL_CHANGE_CENSORED.includes(field)
+            ? CENSOR_STRING
+            : this.after[field],
+        });
+      }
+    });
+    return JSON.stringify(changes);
+  }
+}
+
+export interface IAudit {
+  message: string | null;
+  modelType: string | null;
+  modelId: string | null;
+  changes?: ModelChange;
+}
+
+export class Auditor {
+  audits: IAudit[] = [];
+
+  add(
+    message: string | null,
+    modelType: string | null,
+    modelId: string | null,
+    changes?: ModelChange
+  ): void {
+    this.audits.push({
+      message,
+      modelType,
+      modelId,
+      changes,
+    });
+  }
+}
+
+interface IAuditRow {
+  timestamp: string;
+  message: string;
+  changes: string;
+  firstName: string;
+  lastName: string;
+}
 
 export default class Audit {
-  static async getAudits(
-    modelType: string | null,
-    modelId: string | null
-  ): Promise<object[]> {
+  static async getAudits(modelType: string, modelId: string) {
     const query = `
       SELECT
         timestamp,
@@ -32,15 +105,16 @@ export default class Audit {
         timestamp DESC
     `;
     const values = [modelType, modelId];
-    const [rows] = await execQuery(query, values);
-    return rows.map((row: Record<string, unknown>) => {
+    const [rows] = await execQuery<IAuditRow[]>(query, values);
+    return rows.map((row: IAuditRow) => {
       if (row.changes) {
-        row.changes = JSON.parse(row.changes);
-        row.changes.forEach((change: any, index: number) => {
+        const changes = JSON.parse(row.changes);
+        changes.forEach((change: IModelChangeRow, index: number) => {
           if (AUDIT_FIELD_BLACKLIST.includes(change.field)) {
-            row.changes.splice(index, 1);
+            changes.splice(index, 1);
           }
         });
+        row.changes = changes;
       }
       return row;
     });

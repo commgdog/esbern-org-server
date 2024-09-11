@@ -1,8 +1,12 @@
 import { NextFunction, Request, Response } from 'express';
 import User from './UserModel.js';
-import ModelChange from '../../util/model-change.js';
+import { ModelChange } from '../audit/AuditModel.js';
 
-const createUser = async (req: Request, res: Response, next: NextFunction) => {
+export const createUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const user = new User();
     const errors = await user.validate(req.body);
@@ -12,20 +16,28 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
     await user.create();
     req.auditor.add(`User "${user.username}" created`, 'User', user.userId);
     return res.status(200).json(user.forClient());
-  } catch (err: unknown) {
+  } catch (err) {
     return next(err);
   }
 };
 
-const readUsers = async (_req: Request, res: Response, next: NextFunction) => {
+export const readUsers = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     return res.status(200).json(await User.readAll());
-  } catch (err: unknown) {
+  } catch (err) {
     return next(err);
   }
 };
 
-const readUser = async (req: Request, res: Response, next: NextFunction) => {
+export const readUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const user = new User({
       userId: req.params.userId,
@@ -34,12 +46,16 @@ const readUser = async (req: Request, res: Response, next: NextFunction) => {
       return res.status(404).json({ message: 'User not found' });
     }
     return res.status(200).json(user.forClient());
-  } catch (err: unknown) {
+  } catch (err) {
     return next(err);
   }
 };
 
-const updateUser = async (req: Request, res: Response, next: NextFunction) => {
+export const updateUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const user = new User({
       userId: req.params.userId,
@@ -68,12 +84,16 @@ const updateUser = async (req: Request, res: Response, next: NextFunction) => {
       changes
     );
     return res.status(200).json(user.forClient());
-  } catch (err: unknown) {
+  } catch (err) {
     return next(err);
   }
 };
 
-const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
+export const deleteUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const user = new User({
       userId: req.params.userId,
@@ -89,9 +109,7 @@ const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
     await user.delete();
     req.auditor.add(`User "${user.username}" deleted`, 'User', user.userId);
     return res.status(200).json({ message: 'User deleted' });
-  } catch (err: unknown) {
+  } catch (err) {
     return next(err);
   }
 };
-
-export { createUser, readUsers, readUser, updateUser, deleteUser };

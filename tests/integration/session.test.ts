@@ -1,407 +1,240 @@
-import { describe, it } from 'node:test';
-import assert from 'node:assert';
-import { mockDatabase } from '../mock.js';
+import { afterAll, afterEach, describe, it, expect } from 'vitest';
+import supertest from 'supertest';
+import dayjs from 'dayjs';
+import { mockDatabase, mockUser, resetDatabase } from '../mock.js';
+import app from '../../src/app.js';
+import { execQuery, initPool } from '../../src/util/database.js';
+import {
+  MAX_LOGIN_ATTEMPTS,
+  PASSWORD_MIN_LENGTH,
+} from '../../src/api/user/UserModel.js';
+import Session, {
+  generateExpiration,
+} from '../../src/api/session/SessionModel.js';
+import generateId from '../../src/util/generate-id.js';
 
-describe('Session Functionality', async () => {
-  const db = await mockDatabase('session');
+const database = await mockDatabase('session');
+initPool();
 
-  console.log(db);
+afterAll(async () => {
+  await resetDatabase(database);
+});
 
-  it('should 1===1', () => {
-    assert.strictEqual(1, 1);
-  });
+afterEach(async () => {
+  await execQuery('DELETE FROM users WHERE 1');
+});
 
-  /*
-  let role: Role;
-  let user: User;
-
-  beforeAll(async () => {
-    ({ role, user } = await mockEnvironment());
-  });
-
-  afterAll(async () => {
-    await role.delete();
-    await user.delete();
-  });
-
-  afterEach(async () => {
-    user.lastToken = null;
-    user.tokenExpires = null;
-    user.loginAttemptCount = 0;
-    user.lastLoginAttemptAt = null;
-    user.lifetimeLoginCount = 0;
-    await user.update();
-  });
-
-  describe('POST /session', () => {
-    test('should return 401 when no credentials are given', async () => {
-      const res = await supertest(app).post('/session').send();
-      expect(res.statusCode).toEqual(401);
-      expect(res.body).toEqual({
-        message: 'Invalid credentials',
-        errors: ['username', 'password'],
-      });
-    });
-
-    test('should return 429 when the user has too many login attempts', async () => {
-      onTestFinished(async () => {
-        user.loginAttemptCount = 0;
-        user.lastLoginAttemptAt = null;
-        await user.update();
-      });
-      for (let i = 0; i < MAX_LOGIN_ATTEMPTS; i += 1) {
-        await supertest(app).post('/session').send({
-          username: user.username,
-          password: 'BAD_PASSWORD',
+describe('POST /session', () => {
+  it('should return 401 when no credentials are given', async () => {
+    await supertest(app)
+      .post('/session')
+      .expect(401)
+      .then((response) => {
+        expect(response.body).toEqual({
+          message: 'Invalid credentials',
+          errors: ['username', 'password'],
         });
-      }
-      const res = await supertest(app).post('/session').send({
+      });
+  });
+
+  it('should return 429 when the user has too many login attempts', async () => {
+    const user = mockUser();
+    user.loginAttemptCount = MAX_LOGIN_ATTEMPTS;
+    user.lastLoginAttemptAt = dayjs().format('YYYY-MM-DD HH:mm:ss');
+    await user.create();
+
+    await supertest(app)
+      .post('/session')
+      .send({
         username: user.username,
         password: 'password',
+      })
+      .expect(429)
+      .then((response) => {
+        expect(response.body).toEqual({
+          message: 'Account locked, try back later',
+        });
       });
-      expect(res.statusCode).toEqual(429);
-      expect(res.body).toEqual({
-        message: 'Account locked, try back later',
-      });
-    });
+  });
 
-    test('should return 401 when an invalid password is given', async () => {
-      const res = await supertest(app).post('/session').send({
+  it('should return 401 when an invalid password is given', async () => {
+    const user = mockUser();
+    await user.create();
+
+    await supertest(app)
+      .post('/session')
+      .send({
         username: user.username,
-        password: 'BAD_PASSWORD',
+        password: 'bad password',
+      })
+      .expect(401)
+      .then((response) => {
+        expect(response.body).toEqual({
+          message: 'Invalid credentials',
+          errors: ['username', 'password'],
+        });
       });
-      expect(res.statusCode).toEqual(401);
-      expect(res.body).toEqual({
-        message: 'Invalid credentials',
-        errors: ['username', 'password'],
-      });
-    });
+  });
 
-    test('should return 202 when the user password is expired', async () => {
-      user.passwordIsExpired = true;
-      await user.update();
-      const res = await supertest(app).post('/session').send({
+  it('should return 202 when the user password is expired', async () => {
+    const user = mockUser();
+    user.passwordIsExpired = true;
+    await user.create();
+
+    await supertest(app)
+      .post('/session')
+      .send({
         username: user.username,
         password: 'password',
+      })
+      .expect(202)
+      .then((response) => {
+        expect(response.body).toEqual({
+          message: 'Password is expired',
+        });
       });
-      expect(res.statusCode).toEqual(202);
-      expect(res.body).toEqual({
-        message: 'Password is expired',
-      });
-    });
+  });
 
-    test('should return 400 when the user password is expired and the new password is too short', async () => {
-      user.passwordIsExpired = true;
-      await user.update();
-      const res = await supertest(app).post('/session').send({
+  it('should return 400 when the user password is expired and the new password is too short', async () => {
+    const user = mockUser();
+    user.passwordIsExpired = true;
+    await user.create();
+
+    await supertest(app)
+      .post('/session')
+      .send({
         username: user.username,
         password: 'password',
         newPassword1: 'a',
         newPassword2: 'a',
+      })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toEqual({
+          message: `Password must be at least ${PASSWORD_MIN_LENGTH} characters`,
+          errors: ['newPassword'],
+        });
       });
-      expect(res.statusCode).toEqual(400);
-      expect(res.body).toEqual({
-        message: `Password must be at least ${PASSWORD_MIN_LENGTH} characters`,
-        errors: ['newPassword'],
-      });
-    });
+  });
 
-    test('should return 400 when the user password is expired and the new passwords dont match', async () => {
-      user.passwordIsExpired = true;
-      await user.update();
-      const res = await supertest(app).post('/session').send({
+  it('should return 400 when the user password is expired and the new passwords dont match', async () => {
+    const user = mockUser();
+    user.passwordIsExpired = true;
+    await user.create();
+
+    await supertest(app)
+      .post('/session')
+      .send({
         username: user.username,
         password: 'password',
         newPassword1: 'password1',
         newPassword2: 'password2',
+      })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toEqual({
+          message: `Passwords do not match`,
+          errors: ['newPassword'],
+        });
       });
-      expect(res.statusCode).toEqual(400);
-      expect(res.body).toEqual({
-        message: 'Passwords do not match',
-        errors: ['newPassword'],
-      });
-    });
+  });
 
-    test('should return 200 when the user password is expired and a new password is set', async () => {
-      onTestFinished(async () => {
-        user.passwordIsExpired = false;
-        user.setPassword('password');
-        await user.update();
-      });
-      user.passwordIsExpired = true;
-      await user.update();
-      const oldPassword = user.password;
-      const res = await supertest(app).post('/session').send({
+  it('should return 200 when the user password is expired and a new password is set', async () => {
+    const user = mockUser();
+    user.passwordIsExpired = true;
+    await user.create();
+
+    await supertest(app)
+      .post('/session')
+      .send({
         username: user.username,
         password: 'password',
         newPassword1: 'newPassword',
         newPassword2: 'newPassword',
+      })
+      .expect(200)
+      .then(async (response) => {
+        const session = new Session({
+          lastToken: response.body.lastToken,
+        });
+        await session.read(false);
+        expect(response.body).toEqual(session.forClient());
       });
-      await user.read();
-      let saved: any = new Session({
-        lastToken: res.body.lastToken,
-      });
-      await saved.read(false);
-      saved = saved.forClient();
-      expect(res.statusCode).toEqual(200);
-      expect(res.body).toEqual({
-        side: saved.side,
-        lastToken: saved.lastToken,
-        tokenExpires: saved.tokenExpires,
-        userId: saved.userId,
-        organizationId: saved.organizationId,
-        organizationAlias: saved.organizationAlias,
-        customerId: saved.customerId,
-        customerAlias: saved.customerAlias,
-        username: saved.username,
-        locationId: saved.locationId,
-        email: saved.email,
-        firstName: saved.firstName,
-        lastName: saved.lastName,
-        passwordIsExpired: saved.passwordIsExpired,
-        homePage: saved.homePage,
-        isOrganizationOwner: saved.isOrganizationOwner,
-        announcements: saved.announcements,
-        availableAceIntegrations: saved.availableAceIntegrations,
-        availableEagleIntegrations: saved.availableEagleIntegrations,
-        availableLocations: saved.availableLocations,
-        availableUserLocations: saved.availableUserLocations,
-        availableRoles: saved.availableRoles,
-        availableTiers: saved.availableTiers,
-        features: saved.features,
-        permissions: saved.permissions,
-      });
-      expect(oldPassword === user.password).toEqual(false);
-    });
+  });
 
-    test('should return 200 on successful login', async () => {
-      const res = await supertest(app).post('/session').send({
+  it('should return 200 on successful login', async () => {
+    const user = mockUser();
+    await user.create();
+
+    await supertest(app)
+      .post('/session')
+      .send({
         username: user.username,
         password: 'password',
-      });
-      let saved: any = new Session({
-        lastToken: res.body.lastToken,
-      });
-      await saved.read(false);
-      saved = saved.forClient();
-      expect(res.statusCode).toEqual(200);
-      expect(res.body).toEqual({
-        lastToken: saved.lastToken,
-        tokenExpires: saved.tokenExpires,
-        userId: saved.userId,
-        username: saved.username,
-        email: saved.email,
-        firstName: saved.firstName,
-        lastName: saved.lastName,
-        passwordIsExpired: saved.passwordIsExpired,
-        homePage: saved.homePage,
-        availableRoles: saved.availableRoles,
-        permissions: saved.permissions,
-      });
-    });
-  });
-
-  describe('GET /session', () => {
-    test('should return 200 and an empty session if not logged in', async () => {
-      const res = await supertest(app).get('/session').send();
-      expect(res.statusCode).toEqual(200);
-      expect(res.body).toEqual({
-        lastToken: null,
-        tokenExpires: null,
-        userId: null,
-        username: null,
-        email: null,
-        firstName: null,
-        lastName: null,
-        passwordIsExpired: false,
-        homePage: 'dashboard',
-        availableRoles: [],
-        permissions: [],
-      });
-    });
-
-    test('should return 200 a valid session if logged in', async () => {
-      const login = await supertest(app).post('/session').send({
-        username: user.username,
-        password: 'password',
-      });
-      const res = await supertest(app)
-        .get('/session')
-        .set('Authorization', `Bearer ${login.body.lastToken}`)
-        .send();
-      let saved: any = new Session({
-        lastToken: res.body.lastToken,
-      });
-      await saved.read(false);
-      saved = saved.forClient();
-      expect(res.statusCode).toEqual(200);
-      expect(res.body).toEqual({
-        lastToken: saved.lastToken,
-        tokenExpires: saved.tokenExpires,
-        userId: saved.userId,
-        username: saved.username,
-        email: saved.email,
-        firstName: saved.firstName,
-        lastName: saved.lastName,
-        passwordIsExpired: saved.passwordIsExpired,
-        homePage: saved.homePage,
-        availableRoles: saved.availableRoles,
-        permissions: saved.permissions,
-      });
-    });
-  });
-
-  describe('DELETE /session', () => {
-    test('should return 200 and an empty session if not logged in', async () => {
-      const res = await supertest(app).delete('/session').send();
-      expect(res.statusCode).toEqual(200);
-      expect(res.body).toEqual({
-        lastToken: null,
-        tokenExpires: null,
-        userId: null,
-        username: null,
-        email: null,
-        firstName: null,
-        lastName: null,
-        passwordIsExpired: false,
-        homePage: 'dashboard',
-        availableRoles: [],
-        permissions: [],
-      });
-    });
-
-    test('should return 200 and an empty session if logged in', async () => {
-      const login = await supertest(app).post('/session').send({
-        username: user.username,
-        password: 'password',
-      });
-      const res = await supertest(app)
-        .delete('/session')
-        .set('Authorization', `Bearer ${login.body.lastToken}`)
-        .send();
-      let saved: any = new Session({
-        lastToken: res.body.lastToken,
-      });
-      await saved.read(false);
-      saved = saved.forClient();
-      expect(res.statusCode).toEqual(200);
-      expect(res.body).toEqual({
-        side: null,
-        lastToken: null,
-        tokenExpires: null,
-        userId: null,
-        organizationId: null,
-        organizationAlias: null,
-        customerId: null,
-        customerAlias: null,
-        username: null,
-        locationId: null,
-        email: null,
-        firstName: null,
-        lastName: null,
-        passwordIsExpired: false,
-        homePage: 'dashboard',
-        isOrganizationOwner: false,
-        announcements: [],
-        availableAceIntegrations: [],
-        availableEagleIntegrations: [],
-        availableLocations: [],
-        availableUserLocations: [],
-        availableRoles: [],
-        availableTiers: [],
-        permissions: [],
-        features: [],
-      });
-      expect(saved.lastToken).toEqual(null);
-      expect(saved.tokenExpires).toEqual(null);
-    });
-  });
-
-  describe('POST /change-password', () => {
-    let token: string;
-    let sessionUser: User;
-    let sessionRole: Role;
-
-    beforeAll(async () => {
-      ({ token, user: sessionUser, role: sessionRole } = await mockSession());
-    });
-
-    afterAll(async () => {
-      await sessionUser.delete();
-      await sessionRole.delete();
-    });
-
-    test('should return 401 if not authorized', async () => {
-      const res = await supertest(app).post('/session/change-password').send();
-      expect(res.statusCode).toEqual(401);
-      expect(res.body).toEqual({ message: 'Unauthorized' });
-    });
-
-    test('should return 400 if missing password', async () => {
-      const res = await supertest(app)
-        .post('/session/change-password')
-        .set('Authorization', `Bearer ${token}`)
-        .send();
-      expect(res.statusCode).toEqual(400);
-      expect(res.body).toEqual({
-        message: 'Missing password',
-        errorFields: ['currentPassword', 'password', 'passwordConfirm'],
-      });
-    });
-
-    test('should return 400 if password is too short', async () => {
-      const res = await supertest(app)
-        .post('/session/change-password')
-        .set('Authorization', `Bearer ${token}`)
-        .send({
-          currentPassword: 'password',
-          password: 'a',
-          passwordConfirm: 'a',
+      })
+      .expect(200)
+      .then(async (response) => {
+        const session = new Session({
+          lastToken: response.body.lastToken,
         });
-      expect(res.statusCode).toEqual(400);
-      expect(res.body).toEqual({
-        message: `Password must be at least ${PASSWORD_MIN_LENGTH} characters`,
-        errorFields: ['password'],
+        await session.read(false);
+        expect(response.body).toEqual(session.forClient());
       });
-    });
-
-    test('should return 400 if passwords do not match', async () => {
-      const res = await supertest(app)
-        .post('/session/change-password')
-        .set('Authorization', `Bearer ${token}`)
-        .send({
-          currentPassword: 'password',
-          password: 'password1',
-          passwordConfirm: 'password2',
-        });
-      expect(res.statusCode).toEqual(400);
-      expect(res.body).toEqual({
-        message: 'Passwords do not match',
-        errorFields: ['password', 'passwordConfirm'],
-      });
-    });
-
-    test('should return 200 if password was changed', async () => {
-      onTestFinished(async () => {
-        sessionUser.setPassword('password');
-        await sessionUser.update();
-      });
-      const res = await supertest(app)
-        .post('/session/change-password')
-        .set('Authorization', `Bearer ${token}`)
-        .send({
-          currentPassword: 'password',
-          password: 'secret',
-          passwordConfirm: 'secret',
-        });
-      const saved: any = new User({
-        userId: sessionUser.userId,
-      });
-      await saved.read(false);
-      expect(res.statusCode).toEqual(200);
-      expect(res.body).toEqual({ message: 'Password changed successfully' });
-      expect(saved.verifyPassword('secret')).toEqual(true);
-    });
   });
-   */
+});
+
+describe('GET /session', () => {
+  it('should return 200 and an empty session if not logged in', async () => {
+    await supertest(app)
+      .get('/session')
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toEqual(new Session().forClient());
+      });
+  });
+
+  it('should return 200 a valid session if logged in', async () => {
+    const user = mockUser();
+    user.lastToken = generateId();
+    user.tokenExpires = generateExpiration();
+    await user.create();
+
+    await supertest(app)
+      .get('/session')
+      .set('Authorization', `Bearer ${user.lastToken}`)
+      .expect(200)
+      .then(async (response) => {
+        const session = new Session({
+          lastToken: user.lastToken,
+        });
+        await session.read(false);
+        expect(response.body).toEqual(session.forClient());
+      });
+  });
+});
+
+describe('DELETE /session', () => {
+  it('should return 200 and an empty session if not logged in', async () => {
+    await supertest(app)
+      .delete('/session')
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toEqual(new Session().forClient());
+      });
+  });
+
+  it('should return 200 and an empty session if logged in', async () => {
+    const user = mockUser();
+    user.lastToken = generateId();
+    user.tokenExpires = generateExpiration();
+    await user.create();
+
+    await supertest(app)
+      .delete('/session')
+      .set('Authorization', `Bearer ${user.lastToken}`)
+      .expect(200)
+      .then(async (response) => {
+        expect(response.body).toEqual(new Session().forClient());
+      });
+  });
 });

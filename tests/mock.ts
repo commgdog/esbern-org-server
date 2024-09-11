@@ -2,23 +2,32 @@ import crypto from 'node:crypto';
 import mysql from 'mysql2/promise';
 import fs from 'node:fs';
 import path from 'node:path';
+import User from '../src/api/user/UserModel.js';
+import Role from '../src/api/role/RoleModel.js';
+import Permission from '../src/util/permission.js';
+import generateId from '../src/util/generate-id.js';
+import { generateExpiration } from '../src/api/session/SessionModel.js';
 
-function rand(length: number): string {
+function rand(length: number) {
   return crypto.randomBytes(length).toString('hex');
 }
 
-const mockDatabase = async (prefix: string) => {
-  const name = `test_${prefix}_${rand(12)}`;
+const createConnection = async () => {
+  return mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    multipleStatements: true,
+  });
+};
+
+export const mockDatabase = async (prefix: string) => {
+  const name = `_test__${prefix}_${rand(12)}`;
   const sql = fs.readFileSync(
     path.resolve(import.meta.dirname + '/../src/sql/create-tables.sql'),
     'utf-8'
   );
-  const connection = await mysql.createConnection({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'user',
-    password: process.env.DB_PASS || 'pass',
-    multipleStatements: true,
-  });
+  const connection = await createConnection();
   await connection.query(`DROP DATABASE IF EXISTS ${name}`);
   await connection.query(`CREATE DATABASE ${name}`);
   await connection.query(`USE ${name}`);
@@ -28,4 +37,38 @@ const mockDatabase = async (prefix: string) => {
   return name;
 };
 
-export { mockDatabase };
+export const resetDatabase = async (name: string) => {
+  const connection = await createConnection();
+  await connection.query(`DROP DATABASE IF EXISTS ${name}`);
+  await connection.end();
+};
+
+export const mockSession = async () => {
+  const role = mockRole();
+  await role.create();
+  const user = mockUser();
+  user.lastToken = generateId();
+  user.tokenExpires = generateExpiration();
+  user.roles = [role.roleId];
+  await user.create();
+  return { role, user };
+};
+
+export const mockUser = (username?: string) => {
+  const user = new User({
+    username: username ?? rand(20),
+    email: 'commgdog@gmail.com',
+    firstName: rand(20),
+    lastName: rand(20),
+  });
+  user.setPassword('password');
+  return user;
+};
+
+export const mockRole = (name?: string) => {
+  return new Role({
+    name: name ?? rand(20),
+    description: rand(20),
+    permissions: Object.values(Permission),
+  });
+};

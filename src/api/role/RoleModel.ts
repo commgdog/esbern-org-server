@@ -1,7 +1,7 @@
 import Joi from 'joi';
-import { PoolConnection } from 'mysql2/promise';
+import { PoolConnection, RowDataPacket } from 'mysql2/promise';
 import generateId from '../../util/generate-id.js';
-import pool, { execQuery } from '../../util/database.js';
+import { execQuery, getConnection } from '../../util/database.js';
 import Permission from '../../util/permission.js';
 
 export default class Role {
@@ -37,11 +37,11 @@ export default class Role {
       .required(),
   });
 
-  constructor(properties: object = {}) {
+  constructor(properties = {}) {
     Object.assign(this, properties);
   }
 
-  static async readAll(): Promise<object[]> {
+  static async readAll() {
     const query = `
       SELECT
         roleId,
@@ -56,7 +56,7 @@ export default class Role {
     return rows;
   }
 
-  async read(): Promise<boolean> {
+  async read() {
     const query = `
       SELECT
         *
@@ -66,7 +66,7 @@ export default class Role {
         roleId = ?
     `;
     const values = [this.roleId];
-    const [rows] = await execQuery(query, values);
+    const [rows] = await execQuery<RowDataPacket[]>(query, values);
     if (rows.length === 1) {
       Object.assign(this, rows[0]);
       this.permissions = await this.readPermissions();
@@ -77,7 +77,7 @@ export default class Role {
     return false;
   }
 
-  async readPermissions(): Promise<Permission[]> {
+  async readPermissions() {
     const query = `
       SELECT
         permission
@@ -87,11 +87,11 @@ export default class Role {
         roleId = ?
     `;
     const values = [this.roleId];
-    const [rows] = await execQuery(query, values);
-    return rows.map((row: Record<string, Permission>) => row.permission);
+    const [rows] = await execQuery<RowDataPacket[]>(query, values);
+    return rows.map((row) => row.permission);
   }
 
-  async validate(values: object): Promise<object[]> {
+  async validate(values: object) {
     const errors: object[] = [];
     const { error, value } = this.schema.validate(values, {
       abortEarly: false,
@@ -110,9 +110,9 @@ export default class Role {
     return errors;
   }
 
-  async create(): Promise<void> {
+  async create() {
     this.roleId ??= generateId();
-    const conn = await pool.getConnection();
+    const conn = await getConnection();
     try {
       await conn.beginTransaction();
       const query = `
@@ -138,8 +138,8 @@ export default class Role {
     }
   }
 
-  async update(): Promise<void> {
-    const conn = await pool.getConnection();
+  async update() {
+    const conn = await getConnection();
     try {
       await conn.beginTransaction();
       const query = `
@@ -164,7 +164,7 @@ export default class Role {
     }
   }
 
-  async delete(): Promise<void> {
+  async delete() {
     const query = `
       DELETE FROM
         roles
@@ -175,7 +175,7 @@ export default class Role {
     await execQuery(query, values);
   }
 
-  async isUnique(): Promise<boolean> {
+  async isUnique() {
     let query = `
       SELECT
         1
@@ -189,17 +189,17 @@ export default class Role {
       query += ' AND roleId <> ?';
       values.push(this.roleId);
     }
-    const [rows] = await execQuery(query, values);
+    const [rows] = await execQuery<RowDataPacket[]>(query, values);
     return !rows.length;
   }
 
-  async validatePermissions(): Promise<boolean> {
+  async validatePermissions() {
     return this.permissions.every((value) =>
       Object.values(Permission).includes(value)
     );
   }
 
-  async deletePermissions(conn: PoolConnection): Promise<void> {
+  async deletePermissions(conn: PoolConnection) {
     const query = `
       DELETE FROM
         rolePermissions
@@ -210,7 +210,7 @@ export default class Role {
     await conn.query(query, values);
   }
 
-  async insertPermissions(conn: PoolConnection): Promise<void> {
+  async insertPermissions(conn: PoolConnection) {
     const query = `
       INSERT INTO
         rolePermissions (
@@ -226,7 +226,7 @@ export default class Role {
     await conn.query(query, values);
   }
 
-  async setPermissions(conn: PoolConnection): Promise<void> {
+  async setPermissions(conn: PoolConnection) {
     if (await this.validatePermissions()) {
       await this.deletePermissions(conn);
       if (this.permissions.length) {
@@ -235,7 +235,7 @@ export default class Role {
     }
   }
 
-  forClient(): object {
+  forClient() {
     return JSON.parse(
       JSON.stringify({
         roleId: this.roleId,

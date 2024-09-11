@@ -1,27 +1,34 @@
-import mysql, { RowDataPacket } from 'mysql2';
+import mysql, { FieldPacket, Pool } from 'mysql2/promise';
 
-const database = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'user',
-  password: process.env.DB_PASS || 'pass',
-  database: process.env.DB_NAME || 'omni',
-  waitForConnections: true,
-  connectionLimit: 10,
-  maxIdle: 10,
-  idleTimeout: 60000,
-  queueLimit: 0,
-  enableKeepAlive: true,
-  keepAliveInitialDelay: 0,
-  dateStrings: true,
-});
+let pool: Pool;
 
-const pool = database.promise();
-
-export const execQuery = async (query: string, values: unknown = []) => {
-  const conn = await pool.getConnection();
-  const response = await conn.query<RowDataPacket[]>(query, values);
-  conn.release();
-  return response;
+export const initPool = () => {
+  pool = mysql.createPool({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME,
+    waitForConnections: true,
+    connectionLimit: 10,
+    maxIdle: 10,
+    idleTimeout: 60000,
+    queueLimit: 0,
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 0,
+    dateStrings: true,
+  });
 };
 
-export default pool;
+export const getConnection = () => {
+  return pool.getConnection();
+};
+
+export const execQuery = async <T>(
+  query: string,
+  values: unknown = []
+): Promise<[T, FieldPacket[]]> => {
+  const conn = await pool.getConnection();
+  const response = await conn.query(query, values);
+  conn.release();
+  return response as [T, FieldPacket[]];
+};

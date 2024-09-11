@@ -6,7 +6,7 @@ import User, {
   PASSWORD_MIN_LENGTH,
 } from '../user/UserModel.js';
 
-const createSession = async (
+export const createSession = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -75,16 +75,16 @@ const createSession = async (
     await user.update();
     req.auditor.add(`User "${user.username}" logged in`, 'User', user.userId);
     return res.status(200).json(req.session.forClient());
-  } catch (err: unknown) {
+  } catch (err) {
     return next(err);
   }
 };
 
-const readSession = (req: Request, res: Response) => {
+export const readSession = (req: Request, res: Response) => {
   res.status(200).json(req.session.forClient());
 };
 
-const deleteSession = async (
+export const deleteSession = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -92,12 +92,12 @@ const deleteSession = async (
   try {
     await req.session.delete();
     res.status(200).json(new Session().forClient());
-  } catch (err: unknown) {
+  } catch (err) {
     next(err);
   }
 };
 
-const changePassword = async (
+export const changePassword = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -156,9 +156,7 @@ const changePassword = async (
       user.userId
     );
     return res.status(200).json({ message: 'Password changed successfully' });
-  } catch (err: unknown) {
+  } catch (err) {
     return next(err);
   }
 };
-
-export { createSession, readSession, deleteSession, changePassword };

@@ -1,6 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import logger from './util/logger.js';
 import setRequestId from './middleware/set-request-id.js';
 import setAuditor from './middleware/set-auditor.js';
 import startRequestLogging from './middleware/start-request-logging.js';
@@ -41,18 +40,4 @@ app.use('/role', RoleRouter);
 app.use(handle404);
 app.use(handle500);
 
-// Server configuration
-const port = Number(process.env.EXPRESS_LISTEN_PORT) || 3000;
-const host = process.env.EXPRESS_LISTEN_HOST || 'localhost';
-
-// Start the express listener
-const server = app
-  .listen(port, host, () => {
-    logger.info(`[express] Started listening on ${host}:${port}`);
-  })
-  .on('error', (err: unknown) => {
-    logger.error(err);
-    process.exit(1);
-  });
-
-export { app, server };
+export default app;
