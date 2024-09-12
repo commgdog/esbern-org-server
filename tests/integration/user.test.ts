@@ -1,10 +1,10 @@
 import { afterAll, afterEach, describe, it, expect } from 'vitest';
 import supertest from 'supertest';
+import { uuidv7 } from 'uuidv7';
 import { mockDatabase, mockSession, mockUser, resetDatabase } from '../mock.js';
-import app from '../../src/util/express.js';
-import { execQuery, initPool } from '../../src/util/database.js';
-import generateId from '../../src/util/generate-id.js';
-import User from '../../src/api/user/UserModel.js';
+import app from '../../src/services/express.js';
+import { execQuery, initPool } from '../../src/services/database.js';
+import User from '../../src/apis/user/UserModel.js';
 
 const database = await mockDatabase('user');
 initPool();
@@ -367,7 +367,7 @@ describe('PATCH /user/:userId', () => {
         lastName: created.lastName,
         homePage: created.homePage,
         isInactive: created.isInactive,
-        roles: [generateId(), generateId()],
+        roles: [uuidv7(), uuidv7()],
       })
       .expect(200)
       .then(async (response) => {

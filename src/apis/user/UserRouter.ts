@@ -6,8 +6,8 @@ import {
   readUsers,
   updateUser,
 } from './UserController.js';
-import authenticate from '../../middleware/authenticate.js';
-import Permission from '../../util/permission.js';
+import authenticate from '../../middlewares/authenticate.js';
+import { Permission } from '../role/RoleModel.js';
 
 const router = express.Router();
 

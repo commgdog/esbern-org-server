@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import logger from '../util/logger.js';
+import logger from '../services/logger.js';
 
 export const handle404 = (_req: Request, res: Response) => {
   res.status(404).json({ message: 'The requested endpoint was not found' });

@@ -2,8 +2,8 @@ import bcryptjs from 'bcryptjs';
 import Joi from 'joi';
 import { PoolConnection, RowDataPacket } from 'mysql2/promise';
 import dayjs from 'dayjs';
-import generateId from '../../util/generate-id.js';
-import { execQuery, getConnection } from '../../util/database.js';
+import { uuidv7 } from 'uuidv7';
+import { execQuery, getConnection } from '../../services/database.js';
 
 const { compareSync, hashSync } = bcryptjs;
 
@@ -220,7 +220,7 @@ export default class User {
   }
 
   async create() {
-    this.userId ??= generateId();
+    this.userId ??= uuidv7();
     const conn = await getConnection();
     try {
       await conn.beginTransaction();

@@ -1,8 +1,8 @@
 import { NextFunction, Request, Response } from 'express';
-import generateId from '../util/generate-id.js';
+import { uuidv7 } from 'uuidv7';
 
 export default (req: Request, res: Response, next: NextFunction) => {
-  req.requestId = generateId();
+  req.requestId = uuidv7();
   res.set('X-Request-Id', req.requestId);
   next();
 };

@@ -1,7 +1,7 @@
 import express from 'express';
 import readAudits from './AuditController.js';
-import authenticate from '../../middleware/authenticate.js';
-import Permission from '../../util/permission.js';
+import authenticate from '../../middlewares/authenticate.js';
+import { Permission } from '../role/RoleModel.js';
 
 const router = express.Router();
 

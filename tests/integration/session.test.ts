@@ -1,17 +1,17 @@
 import { afterAll, afterEach, describe, it, expect } from 'vitest';
 import supertest from 'supertest';
 import dayjs from 'dayjs';
+import { uuidv7 } from 'uuidv7';
 import { mockDatabase, mockUser, resetDatabase } from '../mock.js';
-import app from '../../src/util/express.js';
-import { execQuery, initPool } from '../../src/util/database.js';
+import { execQuery, initPool } from '../../src/services/database.js';
+import app from '../../src/services/express.js';
 import {
   MAX_LOGIN_ATTEMPTS,
   PASSWORD_MIN_LENGTH,
-} from '../../src/api/user/UserModel.js';
+} from '../../src/apis/user/UserModel.js';
 import Session, {
   generateExpiration,
-} from '../../src/api/session/SessionModel.js';
-import generateId from '../../src/util/generate-id.js';
+} from '../../src/apis/session/SessionModel.js';
 
 const database = await mockDatabase('session');
 initPool();
@@ -195,7 +195,7 @@ describe('GET /session', () => {
 
   it('should return 200 a valid session if logged in', async () => {
     const user = mockUser();
-    user.lastToken = generateId();
+    user.lastToken = uuidv7();
     user.tokenExpires = generateExpiration();
     await user.create();
 
@@ -225,7 +225,7 @@ describe('DELETE /session', () => {
 
   it('should return 200 and an empty session if logged in', async () => {
     const user = mockUser();
-    user.lastToken = generateId();
+    user.lastToken = uuidv7();
     user.tokenExpires = generateExpiration();
     await user.create();
 

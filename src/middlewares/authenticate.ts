@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import Permission from '../util/permission.js';
+import { Permission } from '../apis/role/RoleModel.js';
 
 export default (permission?: Permission) => {
   return (req: Request, res: Response, next: NextFunction) => {

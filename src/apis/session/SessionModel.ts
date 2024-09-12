@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
-import generateId from '../../util/generate-id.js';
-import { execQuery } from '../../util/database.js';
 import { RowDataPacket } from 'mysql2/promise';
+import { uuidv7 } from 'uuidv7';
+import { execQuery } from '../../services/database.js';
 
 const SESSION_TIMEOUT_LENGTH = 900;
 
@@ -103,7 +103,7 @@ export default class Session {
     if (!this.userId) {
       return;
     }
-    this.lastToken = generateId();
+    this.lastToken = uuidv7();
     await this.touch();
     await this.read();
   }

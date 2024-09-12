@@ -1,8 +1,19 @@
 import Joi from 'joi';
+import { uuidv7 } from 'uuidv7';
 import { PoolConnection, RowDataPacket } from 'mysql2/promise';
-import generateId from '../../util/generate-id.js';
-import { execQuery, getConnection } from '../../util/database.js';
-import Permission from '../../util/permission.js';
+import { execQuery, getConnection } from '../../services/database.js';
+
+export enum Permission {
+  AUDIT_READ = 'AUDIT_READ',
+  ROLE_CREATE = 'ROLE_CREATE',
+  ROLE_DELETE = 'ROLE_DELETE',
+  ROLE_READ = 'ROLE_READ',
+  ROLE_UPDATE = 'ROLE_UPDATE',
+  USER_CREATE = 'USER_CREATE',
+  USER_DELETE = 'USER_DELETE',
+  USER_READ = 'USER_READ',
+  USER_UPDATE = 'USER_UPDATE',
+}
 
 export default class Role {
   roleId: string | null = null;
@@ -111,7 +122,7 @@ export default class Role {
   }
 
   async create() {
-    this.roleId ??= generateId();
+    this.roleId ??= uuidv7();
     const conn = await getConnection();
     try {
       await conn.beginTransaction();

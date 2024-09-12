@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import { Auditor } from '../api/audit/AuditModel.js';
+import { Auditor } from '../apis/audit/AuditModel.js';
 
 export default async (req: Request, _res: Response, next: NextFunction) => {
   req.auditor = new Auditor();

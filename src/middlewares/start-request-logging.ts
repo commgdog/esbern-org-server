@@ -1,10 +1,10 @@
 import { NextFunction, Request, Response } from 'express';
 import { PoolConnection } from 'mysql2/promise';
 import dayjs from 'dayjs';
-import { getConnection } from '../util/database.js';
-import logger from '../util/logger.js';
-import generateId from '../util/generate-id.js';
-import { IAudit } from '../api/audit/AuditModel.js';
+import { uuidv7 } from 'uuidv7';
+import { getConnection } from '../services/database.js';
+import logger from '../services/logger.js';
+import { IAudit } from '../apis/audit/AuditModel.js';
 
 export default (req: Request, res: Response, next: NextFunction) => {
   const start = process.hrtime.bigint();
@@ -57,7 +57,7 @@ export default (req: Request, res: Response, next: NextFunction) => {
     const insert: (string | null)[][] = [];
     req.auditor.audits.forEach((audit: IAudit) => {
       insert.push([
-        generateId(),
+        uuidv7(),
         req.requestId,
         audit.message,
         audit.modelType,

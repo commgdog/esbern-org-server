@@ -5,7 +5,7 @@ import {
   deleteSession,
   changePassword,
 } from './SessionController.js';
-import authenticate from '../../middleware/authenticate.js';
+import authenticate from '../../middlewares/authenticate.js';
 
 const router = express.Router();
 

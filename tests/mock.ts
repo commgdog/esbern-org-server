@@ -1,12 +1,11 @@
 import crypto from 'node:crypto';
-import mysql from 'mysql2/promise';
 import fs from 'node:fs';
 import path from 'node:path';
-import User from '../src/api/user/UserModel.js';
-import Role from '../src/api/role/RoleModel.js';
-import Permission from '../src/util/permission.js';
-import generateId from '../src/util/generate-id.js';
-import { generateExpiration } from '../src/api/session/SessionModel.js';
+import { uuidv7 } from 'uuidv7';
+import mysql from 'mysql2/promise';
+import User from '../src/apis/user/UserModel.js';
+import Role, { Permission } from '../src/apis/role/RoleModel.js';
+import { generateExpiration } from '../src/apis/session/SessionModel.js';
 
 function rand(length: number) {
   return crypto.randomBytes(length).toString('hex');
@@ -47,7 +46,7 @@ export const mockSession = async () => {
   const role = mockRole();
   await role.create();
   const user = mockUser();
-  user.lastToken = generateId();
+  user.lastToken = uuidv7();
   user.tokenExpires = generateExpiration();
   user.roles = [role.roleId];
   await user.create();
