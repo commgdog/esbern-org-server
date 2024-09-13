@@ -9,6 +9,7 @@ import AuditRouter from '../apis/audit/AuditRouter.js';
 import SessionRouter from '../apis/session/SessionRouter.js';
 import UserRouter from '../apis/user/UserRouter.js';
 import RoleRouter from '../apis/role/RoleRouter.js';
+import PingRouter from '../apis/ping/PingRouter.js';
 import { handle404, handle500 } from '../middlewares/handle-error.js';
 
 // Initialize express
@@ -35,6 +36,7 @@ app.use('/audit', AuditRouter);
 app.use('/session', SessionRouter);
 app.use('/user', UserRouter);
 app.use('/role', RoleRouter);
+app.use('/ping', PingRouter);
 
 // Error handling
 app.use(handle404);
