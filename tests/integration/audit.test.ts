@@ -45,7 +45,11 @@ describe('GET /audit', () => {
       .send({
         name: 'name 2',
         description: 'description 2',
-        permissions: [Permission.ROLE_READ, Permission.ROLE_DELETE],
+        permissions: [
+          Permission.ROLE_READ,
+          Permission.ROLE_DELETE,
+          Permission.SETTINGS_READ,
+        ],
       });
     await timeout(1000);
     await supertest(app)
