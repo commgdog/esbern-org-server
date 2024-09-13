@@ -7,6 +7,7 @@ The server-side endpoints and logic for esbern.org.
 * MySQL compatible database (Tested on MariaDB 10)
 
 ## Installation
+#### Project
 ```
 # Clone the repository
 git clone https://github.com/commgdog/esbern-org-server.git
@@ -16,6 +17,18 @@ cd esbern-org-server
 
 # Install dependencies
 npm i
+```
+#### Database
+```
+# Create the database
+mysql -h <host> -u <user> -p -e "CREATE DATABASE <database>"
+
+# Create the tables
+mysql -h <host> -u <user> -p <database> < ./src/sql/create-tables.sql
+```
+#### Hydrate
+```
+npm run reset-administrator
 ```
 
 ## Environmental Variables
@@ -45,7 +58,7 @@ Note: `.env` files should **NOT** be used in production.
 ```
 +-- src - Source directory
 |   +-- @types - Typescript definition files
-|   +-- apis - Various APIs
+|   +-- apis - Models, controllers, and routers
 |   +-- middlewares - ExpressJS middlewares
 |   +-- services - Core services
 |   +-- sql - SQL scripts
@@ -53,6 +66,19 @@ Note: `.env` files should **NOT** be used in production.
     +-- integration - Integration tests
     +-- unit - Unit tests
 ```
+
+## Database
+For the project to run, you must create a database and create the required tables. This project
+includes the script `src/sql/create-tables.sql` to facilitate table creation.
+
+## Hydrating the Database
+When the database and tables are created, they contain no data. This project includes a script
+for hydrating the database with an `Administrator` role and optional user. When developing, you
+can run `npm run reset-administrator` to execute the script. In production, you must find and
+execute the script in `cli/`.
+
+Note: The `reset-administrator` script may also be used to reset the `Administrator` role if permissions
+are accidentally stripped or an account is removed from the `Administrator` role on accident.
 
 ## Running the Development Server
 You can run `npm run dev` to start the development server. This project utilizes the `tsx`
