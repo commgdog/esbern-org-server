@@ -154,7 +154,7 @@ export default class Session {
         passwordIsExpired: this.passwordIsExpired,
         homePage: this.homePage,
         permissions: this.permissions,
-      })
+      }),
     );
   }
 }

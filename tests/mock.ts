@@ -24,7 +24,7 @@ export const mockDatabase = async (prefix: string) => {
   const name = `_test__${prefix}_${rand(12)}`;
   const sql = fs.readFileSync(
     path.resolve(import.meta.dirname + '/../src/sql/create-tables.sql'),
-    'utf-8'
+    'utf-8',
   );
   const connection = await createConnection();
   await connection.query(`DROP DATABASE IF EXISTS ${name}`);
@@ -55,7 +55,7 @@ export const mockSession = async () => {
 
 export const mockUser = (username?: string) => {
   const user = new User({
-    username: username ?? rand(20),
+    username: username || rand(20),
     email: 'commgdog@gmail.com',
     firstName: rand(20),
     lastName: rand(20),

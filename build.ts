@@ -37,14 +37,10 @@ cpSync(`${cwd}/src/sql`, `${cwd}/build/sql`);
 
 fs.writeFileSync(
   path.join(buildDir, 'package.json'),
-  JSON.stringify(
-    {
-      name: packageJson.name,
-      version: packageJson.version,
-      type: packageJson.type,
-      dependencies: packageJson.dependencies,
-    },
-    null,
-    2
-  )
+  JSON.stringify({
+    name: packageJson.name,
+    version: packageJson.version,
+    type: packageJson.type,
+    dependencies: packageJson.dependencies,
+  }),
 );

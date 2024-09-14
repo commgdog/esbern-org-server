@@ -8,7 +8,7 @@ const router = express.Router();
 router.get(
   '/:modelType/:modelId',
   authenticate(Permission.AUDIT_READ),
-  readAudits
+  readAudits,
 );
 
 export default router;

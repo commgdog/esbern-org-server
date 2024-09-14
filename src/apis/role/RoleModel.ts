@@ -207,7 +207,7 @@ export default class Role {
 
   async validatePermissions() {
     return this.permissions.every((value) =>
-      Object.values(Permission).includes(value)
+      Object.values(Permission).includes(value),
     );
   }
 
@@ -254,7 +254,7 @@ export default class Role {
         name: this.name,
         description: this.description,
         permissions: this.permissions,
-      })
+      }),
     );
   }
 }

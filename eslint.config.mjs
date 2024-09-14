@@ -1,7 +1,17 @@
 import eslint from '@eslint/js';
-import tseslint from 'typescript-eslint';
+import stylistic from '@stylistic/eslint-plugin';
+import typescript from 'typescript-eslint';
 
-export default tseslint.config(
+export default [
   eslint.configs.recommended,
-  ...tseslint.configs.recommended
-);
+  stylistic.configs.customize({
+    semi: true,
+  }),
+  ...typescript.configs.recommended,
+  {
+    rules: {
+      '@stylistic/arrow-parens': ['error', 'always'],
+      '@stylistic/brace-style': ['error', '1tbs'],
+    },
+  },
+];

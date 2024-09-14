@@ -47,7 +47,6 @@ export default class User {
 
   isValid: boolean = false;
 
-  // prettier-ignore
   schema: Joi.ObjectSchema = Joi.object({
     username: Joi
       .string()
@@ -111,7 +110,7 @@ export default class User {
       .items(
         Joi.string().guid({
           version: ['uuidv7'],
-        })
+        }),
       )
       .required(),
   });
@@ -194,10 +193,7 @@ export default class User {
     } else {
       if (!this.isValid && !value.password) {
         errors.push({ field: 'password', message: 'Missing password' });
-      } else if (
-        value.password &&
-        value.password.length < PASSWORD_MIN_LENGTH
-      ) {
+      } else if (value.password && value.password.length < PASSWORD_MIN_LENGTH) {
         errors.push({
           field: 'password',
           message: `Password must be at least ${PASSWORD_MIN_LENGTH} characters`,
@@ -363,7 +359,7 @@ export default class User {
     `;
     const [rows] = await execQuery<RowDataPacket[]>(query);
     return this.roles.every((value) =>
-      rows.map((row) => row.roleId).includes(value)
+      rows.map((row) => row.roleId).includes(value),
     );
   }
 
@@ -436,8 +432,8 @@ export default class User {
     }
     const duration = dayjs().diff(this.lastLoginAttemptAt, 'second');
     return (
-      this.loginAttemptCount >= MAX_LOGIN_ATTEMPTS &&
-      duration < LOGIN_TIMEOUT_LENGTH
+      this.loginAttemptCount >= MAX_LOGIN_ATTEMPTS
+      && duration < LOGIN_TIMEOUT_LENGTH
     );
   }
 

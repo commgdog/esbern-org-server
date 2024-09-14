@@ -25,7 +25,7 @@ export const getConnection = () => {
 
 export const execQuery = async <T>(
   query: string,
-  values: unknown = []
+  values: unknown = [],
 ): Promise<[T, FieldPacket[]]> => {
   const conn = await pool.getConnection();
   const response = await conn.query(query, values);

@@ -59,7 +59,7 @@ export class Auditor {
     message: string | null,
     modelType: string | null,
     modelId: string | null,
-    changes?: ModelChange
+    changes?: ModelChange,
   ): void {
     this.audits.push({
       message,

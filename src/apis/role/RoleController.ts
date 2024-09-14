@@ -5,7 +5,7 @@ import { ModelChange } from '../audit/AuditModel.js';
 export const createRole = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const role = new Role();
@@ -24,7 +24,7 @@ export const createRole = async (
 export const readRoles = async (
   _req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     return res.status(200).json(await Role.readAll());
@@ -36,7 +36,7 @@ export const readRoles = async (
 export const readRole = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const role = new Role({
@@ -54,7 +54,7 @@ export const readRole = async (
 export const updateRole = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const role = new Role({
@@ -74,7 +74,7 @@ export const updateRole = async (
       `Role "${role.name}" updated`,
       'Role',
       role.roleId,
-      changes
+      changes,
     );
     return res.status(200).json(role.forClient());
   } catch (err) {
@@ -85,7 +85,7 @@ export const updateRole = async (
 export const deleteRole = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const role = new Role({

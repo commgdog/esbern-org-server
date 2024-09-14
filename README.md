@@ -54,6 +54,47 @@ will generate their own database for each suite.
 
 Note: `.env` files should **NOT** be used in production.
 
+## Development Scripts
+
+**Not included in builds for production**
+
+* `npm run dev` - Spin up a development server.
+* `npm run lint` - Lint and fix the entire project.
+* `npm run test` - Run all tests in the project.
+* `npm run build` - Build the project for production.
+* `npm run reset-administrator` - Reset the "Administrator" role and create initial users.
+
+## Dependencies
+* [bcryptjs](https://www.npmjs.com/package/bcryptjs) - Cryptographic hashing.
+* [cors](https://www.npmjs.com/package/cors) - Cross origin resource sharing.
+* [dayjs](https://www.npmjs.com/package/dayjs) - Date and time manipulation and formatting.
+* [express](https://www.npmjs.com/package/express) - Web framework.
+* [joi](https://www.npmjs.com/package/joi) - Input validation.
+* [mysql2](https://www.npmjs.com/package/mysql2) - Database client.
+* [prompt-sync](https://www.npmjs.com/package/prompt-sync) - Input prompt for CLI scripts.
+* [uuidv7](https://www.npmjs.com/package/uuidv7) - Universal unique identifier generation.
+* [winston](https://www.npmjs.com/package/winston) - Logging service.
+
+## Development Dependencies
+* [@eslint/js](https://www.npmjs.com/package/@eslint/js) - Base recommended linting config.
+* [@stylistic/eslint-plugin](https://www.npmjs.com/package/@stylistic/eslint-plugin) - Formatting rules for linting.
+* [@types/bcryptjs](https://www.npmjs.com/package/@types/bcryptjs) - Type definitions for `bcryptjs`.
+* [@types/cors](https://www.npmjs.com/package/@types/cors) - Type definitions for `cors`.
+* [@types/express](https://www.npmjs.com/package/@types/bcryptjs) - Type definitions for `express`.
+* [@types/node](https://www.npmjs.com/package/@types/node) - Type definitions for `node`.
+* [@types/prompt-sync](https://www.npmjs.com/package/@types/prompt-sync) - Type definitions for `prompt-sync`.
+* [@types/supertest](https://www.npmjs.com/package/@types/supertest) - Type definitions for `supertest`.
+* [dotenv](https://www.npmjs.com/package/dotenv) - Environmental config for testing.
+* [eslint](https://www.npmjs.com/package/eslint) - Linting and formatting.
+* [supertest](https://www.npmjs.com/package/supertest) - Framework for testing HTTP requests.
+* [tsx](https://www.npmjs.com/package/tsx) - Typescript execution.
+* [typescript](https://www.npmjs.com/package/typescript) - Typescript core.
+* [typescript-eslint](https://www.npmjs.com/package/typescript-eslint) - Typescript tooling for linting.
+* [vitest](https://www.npmjs.com/package/vitest) - Testing framework.
+
+
+
+
 ## File Structure
 ```
 +-- src - Source directory
@@ -88,6 +129,9 @@ package for watching for file changes and automatically restarting the server wh
 This project utilizes `eslint` for linting. You can perform linting by running `npm run lint`.
 Alternatively, if you are using WebStorm you can configure the IDE to perform the linting.
 
+This project utilizes `stylistic` for along with `eslint` for code formatting. Code formatting
+will be performed upon linting with `es run lint`.
+
 To configure ESLint functionality in WebStorm, navigate to:
 
 `Settings -> Languages & Frameworks -> JavaScript -> Code Quality Tools -> ESLint`
@@ -99,20 +143,6 @@ Set the configuration file to `eslint.config.mjs` which can be found in the root
 of the project.
 
 Additionally, you can set `Run eslint --fix on save` if you would like it to lint on save.
-
-## Formatting
-This project utilizes `prettier` for code formatting. You can perform code formatting by
-running `npm run format`. Alternatively, if you are using WebStorm you can configure the
-IDE to perform the formatting.
-
-To configure Prettier functionality in WebStorm, navigate to:
-
-`Settings -> Languages & Frameworks -> JavaScript -> Prettier`
-
-Set the configuration to `Manual Prettier configuration` and set the `Prettier package` to
-the `prettier` package within the project's `node_modules`.
-
-Additionally, you can set `Run on save` if you would like it to format on save.
 
 ## Testing
 This project utilizes `vitest` for testing. You can perform all tests by running

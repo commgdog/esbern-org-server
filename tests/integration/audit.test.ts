@@ -7,6 +7,7 @@ import { Permission } from '../../src/apis/role/RoleModel.js';
 
 const database = await mockDatabase('role');
 initPool();
+
 const { role, user } = await mockSession();
 
 afterAll(async () => {
@@ -17,9 +18,7 @@ afterEach(async () => {
   await execQuery('DELETE FROM roles WHERE roleId <> ?', [role.roleId]);
 });
 
-const timeout = (ms: number) => {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-};
+const timeout = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 describe('GET /audit', () => {
   it('should return 200 if the audits were read', async () => {

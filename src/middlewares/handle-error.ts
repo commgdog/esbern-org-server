@@ -9,7 +9,7 @@ export const handle500 = (
   err: Error,
   _req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   logger.error(err);
   res.status(500).json({ message: 'An internal error occurred' });

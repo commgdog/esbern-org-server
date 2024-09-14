@@ -5,7 +5,7 @@ import { ModelChange } from '../audit/AuditModel.js';
 export const createUser = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const user = new User();
@@ -24,7 +24,7 @@ export const createUser = async (
 export const readUsers = async (
   _req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     return res.status(200).json(await User.readAll());
@@ -36,7 +36,7 @@ export const readUsers = async (
 export const readUser = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const user = new User({
@@ -54,7 +54,7 @@ export const readUser = async (
 export const updateUser = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const user = new User({
@@ -81,7 +81,7 @@ export const updateUser = async (
       `User "${user.username}" updated`,
       'User',
       user.userId,
-      changes
+      changes,
     );
     return res.status(200).json(user.forClient());
   } catch (err) {
@@ -92,7 +92,7 @@ export const updateUser = async (
 export const deleteUser = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const user = new User({

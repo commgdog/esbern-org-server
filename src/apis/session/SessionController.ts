@@ -9,7 +9,7 @@ import User, {
 export const createSession = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const user = new User({
@@ -63,7 +63,7 @@ export const createSession = async (
       req.auditor.add(
         `User "${user.username}" changed password`,
         'User',
-        user.userId
+        user.userId,
       );
     }
     await req.session.create();
@@ -87,7 +87,7 @@ export const readSession = (req: Request, res: Response) => {
 export const deleteSession = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     await req.session.delete();
@@ -100,7 +100,7 @@ export const deleteSession = async (
 export const changePassword = async (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   try {
     const user = new User({
@@ -153,7 +153,7 @@ export const changePassword = async (
     req.auditor.add(
       `User "${user.username}" changed password`,
       'User',
-      user.userId
+      user.userId,
     );
     return res.status(200).json({ message: 'Password changed successfully' });
   } catch (err) {
