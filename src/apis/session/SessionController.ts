@@ -17,7 +17,7 @@ export const createSession = async (
     });
     if (!(await user.read(true))) {
       return res.status(401).json({
-        message: 'Invalid credentials',
+        message: 'Invalid username or password',
         errors: ['username', 'password'],
       });
     }
@@ -35,12 +35,12 @@ export const createSession = async (
       user.lastLoginAttemptAt = dayjs().format('YYYY-MM-DD HH:mm:ss');
       await user.update();
       return res.status(401).json({
-        message: 'Invalid credentials',
+        message: 'Invalid username or password',
         errors: ['username', 'password'],
       });
     }
     if (user.passwordIsExpired) {
-      if (!req.body.newPassword1 || !req.body.newPassword2) {
+      if (!req.body.newPassword1) {
         return res.status(202).json({
           message: 'Password is expired',
         });
