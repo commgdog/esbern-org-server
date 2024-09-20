@@ -24,7 +24,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Request middleware
-app.use(cors());
+app.use(cors({
+  exposedHeaders: ['X-Request-Id', 'X-Token-Expires'],
+}));
 app.use(setRequestId);
 app.use(setAuditor);
 app.use(setUserAgent);

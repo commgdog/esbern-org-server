@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import Session from '../apis/session/SessionModel.js';
 import logger from '../services/logger.js';
 
-export default async (req: Request, _res: Response, next: NextFunction) => {
+export default async (req: Request, res: Response, next: NextFunction) => {
   if (typeof req.headers.authorization !== 'string') {
     req.session = new Session();
     return next();
@@ -19,6 +19,8 @@ export default async (req: Request, _res: Response, next: NextFunction) => {
     await req.session.read();
     if (!req.session.isValid) {
       req.session = new Session();
+    } else {
+      res.set('X-Token-Expires', req.session.tokenExpires);
     }
   } catch (err: unknown) {
     logger.error(err);
