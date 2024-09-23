@@ -29,6 +29,8 @@ export default class Session {
 
   permissions: string[] = [];
 
+  availableRoles: Record<string, string>[] = [];
+
   isValid: boolean = false;
 
   constructor(properties = {}) {
@@ -72,6 +74,7 @@ export default class Session {
       rows[0].passwordIsExpired = !!rows[0].passwordIsExpired;
       Object.assign(this, rows[0]);
       this.permissions = await this.readPermissions();
+      this.availableRoles = await this.readAvailableRoles();
       this.isValid = true;
       return true;
     }
@@ -97,6 +100,18 @@ export default class Session {
     const values = [this.userId];
     const [rows] = await execQuery<RowDataPacket[]>(query, values);
     return rows.map((row) => row.permission);
+  }
+
+  async readAvailableRoles() {
+    const query = `
+      SELECT
+        roleId,
+        name
+      FROM
+        roles
+    `;
+    const [rows] = await execQuery<RowDataPacket[]>(query);
+    return rows.map((row) => ({ value: row.roleId, title: row.name }));
   }
 
   async create() {
@@ -154,6 +169,7 @@ export default class Session {
         passwordIsExpired: this.passwordIsExpired,
         homePage: this.homePage,
         permissions: this.permissions,
+        availableRoles: this.availableRoles,
       }),
     );
   }
