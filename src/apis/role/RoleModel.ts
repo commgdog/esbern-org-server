@@ -4,6 +4,10 @@ import { PoolConnection, RowDataPacket } from 'mysql2/promise';
 import { execQuery, getConnection } from '../../services/database.js';
 
 export enum Permission {
+  ANNOUNCEMENT_CREATE = 'ANNOUNCEMENT_CREATE',
+  ANNOUNCEMENT_DELETE = 'ANNOUNCEMENT_DELETE',
+  ANNOUNCEMENT_READ = 'ANNOUNCEMENT_READ',
+  ANNOUNCEMENT_UPDATE = 'ANNOUNCEMENT_UPDATE',
   AUDIT_READ = 'AUDIT_READ',
   ROLE_CREATE = 'ROLE_CREATE',
   ROLE_DELETE = 'ROLE_DELETE',
@@ -24,8 +28,6 @@ export default class Role {
   description: string | null = null;
 
   permissions: Permission[] = [];
-
-  isValid: boolean = false;
 
   // prettier-ignore
   schema: Joi.ObjectSchema = Joi.object({
@@ -82,10 +84,8 @@ export default class Role {
     if (rows.length === 1) {
       Object.assign(this, rows[0]);
       this.permissions = await this.readPermissions();
-      this.isValid = true;
       return true;
     }
-    this.isValid = false;
     return false;
   }
 
@@ -117,7 +117,10 @@ export default class Role {
       Object.assign(this, value);
     }
     if (!(await this.isUnique())) {
-      errors.push({ field: 'name', message: '"Name" already in use' });
+      errors.push({
+        field: 'name',
+        message: '"Name" already in use',
+      });
     }
     return errors;
   }

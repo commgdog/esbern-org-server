@@ -2,7 +2,11 @@ import { NextFunction, Request, Response } from 'express';
 import Session from '../apis/session/SessionModel.js';
 import logger from '../services/logger.js';
 
-export default async (req: Request, res: Response, next: NextFunction) => {
+export default async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   if (typeof req.headers.authorization !== 'string') {
     req.session = new Session();
     return next();

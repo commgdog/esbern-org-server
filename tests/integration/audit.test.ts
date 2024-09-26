@@ -1,6 +1,6 @@
 import { afterAll, afterEach, describe, it, expect } from 'vitest';
 import supertest from 'supertest';
-import { mockDatabase, mockSession, resetDatabase } from '../mock.js';
+import { mockDatabase, mockSession, resetDatabase, timeout } from '../mock.js';
 import app from '../../src/services/express.js';
 import { execQuery, initPool } from '../../src/services/database.js';
 import { Permission } from '../../src/apis/role/RoleModel.js';
@@ -17,8 +17,6 @@ afterAll(async () => {
 afterEach(async () => {
   await execQuery('DELETE FROM roles WHERE roleId <> ?', [role.roleId]);
 });
-
-const timeout = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 describe('GET /audit', () => {
   it('should return 200 if the audits were read', async () => {
@@ -52,7 +50,12 @@ describe('GET /audit', () => {
       });
     await timeout(1000);
     await supertest(app)
-      .get(`/audit/Role/${created.body.roleId}`)
+      .get(`/audit`)
+      .query({
+        modelType: 'Role',
+        modelId: created.body.roleId,
+        offset: 0,
+      })
       .set('Authorization', `Bearer ${user.lastToken}`)
       .expect(200)
       .then((response) => {

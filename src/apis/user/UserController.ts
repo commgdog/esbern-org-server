@@ -14,7 +14,11 @@ export const createUser = async (
       return res.status(400).json(errors);
     }
     await user.create();
-    req.auditor.add(`User "${user.username}" created`, 'User', user.userId);
+    req.auditor.add(
+      `User "${user.username}" created`,
+      'User',
+      user.userId,
+    );
     return res.status(200).json(user.forClient());
   } catch (err) {
     return next(err);
@@ -43,7 +47,9 @@ export const readUser = async (
       userId: req.params.userId,
     });
     if (!(await user.read())) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({
+        message: 'User not found',
+      });
     }
     return res.status(200).json(user.forClient());
   } catch (err) {
@@ -61,12 +67,16 @@ export const updateUser = async (
       userId: req.params.userId,
     });
     if (!(await user.read())) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({
+        message: 'User not found',
+      });
     }
     if (user.userId === req.session.userId && req.body.isInactive) {
       return res
         .status(400)
-        .json({ message: 'Cannot make your own account inactive' });
+        .json({
+          message: 'Cannot make your own account inactive',
+        });
     }
     const changes = new ModelChange({ ...user });
     changes.before.roleNames = await user.readRoleNames();
@@ -104,11 +114,15 @@ export const deleteUser = async (
     if (user.userId === req.session.userId) {
       return res
         .status(400)
-        .json({ message: 'Cannot delete your own account' });
+        .json({
+          message: 'Cannot delete your own account',
+        });
     }
     await user.delete();
     req.auditor.add(`User "${user.username}" deleted`, 'User', user.userId);
-    return res.status(200).json({ message: 'User deleted' });
+    return res.status(200).json({
+      message: 'User deleted',
+    });
   } catch (err) {
     return next(err);
   }

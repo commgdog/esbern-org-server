@@ -1,3 +1,22 @@
+CREATE TABLE `announcements` (
+  `announcementId` UUID NOT NULL,
+  `announceAt` DATETIME NOT NULL,
+  `expiresAt` DATETIME NOT NULL,
+  `title` VARCHAR(255) NOT NULL,
+  `body` TEXT NOT NULL,
+  PRIMARY KEY (`announcementId`),
+  INDEX `announceAt` (`announceAt`),
+  INDEX `expiresAt` (`expiresAt`)
+);
+
+CREATE TABLE `announcementsRead` (
+  `announcementId` UUID NOT NULL,
+  `userId` UUID NOT NULL,
+  UNIQUE KEY `announcementsRead_announcementId_userId` (`announcementId`, `userId`),
+  INDEX `announcementId` (`announcementId`),
+  INDEX `userId` (`userId`)
+);
+
 CREATE TABLE `audits` (
   `auditId` UUID NOT NULL,
   `requestId` UUID NOT NULL,
@@ -58,6 +77,7 @@ CREATE TABLE `users` (
   `passwordIsExpired` TINYINT(1) UNSIGNED NOT NULL DEFAULT 1,
   `firstName` VARCHAR(50) NOT NULL,
   `lastName` VARCHAR(50) NOT NULL,
+  `theme` VARCHAR(255) NOT NULL DEFAULT 'light',
   `homePage` VARCHAR(255) NOT NULL DEFAULT 'dashboard',
   `lastToken` UUID DEFAULT NULL,
   `tokenExpires` DATETIME DEFAULT NULL,
@@ -72,6 +92,10 @@ CREATE TABLE `users` (
   INDEX `tokenExpires` (`tokenExpires`),
   INDEX `isInactive` (`isInactive`)
 );
+
+ALTER TABLE `announcementsRead`
+  ADD CONSTRAINT `announcementsRead_announcementId` FOREIGN KEY (`announcementId`) REFERENCES `announcements` (`announcementId`) ON UPDATE CASCADE ON DELETE CASCADE,
+  ADD CONSTRAINT `announcementsRead_userId` FOREIGN KEY (`userId`) REFERENCES `users` (`userId`) ON UPDATE CASCADE ON DELETE CASCADE;
 
 ALTER TABLE `audits`
   ADD CONSTRAINT `audits_requestId` FOREIGN KEY (`requestId`) REFERENCES `requests` (`requestId`) ON UPDATE CASCADE ON DELETE CASCADE;

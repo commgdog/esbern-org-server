@@ -27,6 +27,8 @@ export default class User {
 
   lastName: string | null = null;
 
+  theme: string | null = 'light';
+
   homePage: string | null = 'dashboard';
 
   hasActiveSession: boolean = false;
@@ -44,8 +46,6 @@ export default class User {
   isInactive: boolean = false;
 
   roles: (string | null)[] = [];
-
-  isValid: boolean = false;
 
   schema: Joi.ObjectSchema = Joi.object({
     username: Joi
@@ -93,6 +93,13 @@ export default class User {
       .trim()
       .min(1)
       .max(50)
+      .required(),
+    theme: Joi
+      .string()
+      .label('Theme')
+      .trim()
+      .min(1)
+      .max(255)
       .required(),
     homePage: Joi
       .string()
@@ -159,10 +166,8 @@ export default class User {
       rows[0].isInactive = !!rows[0].isInactive;
       Object.assign(this, rows[0]);
       this.roles = await this.readRoles();
-      this.isValid = true;
       return true;
     }
-    this.isValid = false;
     return false;
   }
 
@@ -191,8 +196,11 @@ export default class User {
         errors.push({ field: err.context?.key, message: err.message });
       });
     } else {
-      if (!this.isValid && !value.password) {
-        errors.push({ field: 'password', message: 'Missing password' });
+      if (!this.userId && !value.password) {
+        errors.push({
+          field: 'password',
+          message: 'Missing password',
+        });
       } else if (value.password && value.password.length < PASSWORD_MIN_LENGTH) {
         errors.push({
           field: 'password',
@@ -210,9 +218,29 @@ export default class User {
       Object.assign(this, value);
     }
     if (!(await this.isUnique())) {
-      errors.push({ field: 'username', message: '"Username" already in use' });
+      errors.push({
+        field: 'username',
+        message: '"Username" already in use',
+      });
     }
     return errors;
+  }
+
+  async markAnnouncementAsRead(announcementId: string | null) {
+    const query = `
+      INSERT IGNORE INTO
+        announcementsRead (
+          announcementId,
+          userId
+        )
+      VALUES
+        ?
+    `;
+    const values = [
+      announcementId,
+      this.userId,
+    ];
+    await execQuery(query, [[values]]);
   }
 
   async create() {
@@ -230,6 +258,7 @@ export default class User {
             passwordIsExpired,
             firstName,
             lastName,
+            theme,
             homePage,
             lastToken,
             tokenExpires,
@@ -249,6 +278,7 @@ export default class User {
         this.passwordIsExpired,
         this.firstName,
         this.lastName,
+        this.theme,
         this.homePage,
         this.lastToken,
         this.tokenExpires,
@@ -283,6 +313,7 @@ export default class User {
           passwordIsExpired = ?,
           firstName = ?,
           lastName = ?,
+          theme = ?,
           homePage = ?,
           lastToken = ?,
           tokenExpires = ?,
@@ -300,6 +331,7 @@ export default class User {
         this.passwordIsExpired,
         this.firstName,
         this.lastName,
+        this.theme,
         this.homePage,
         this.lastToken,
         this.tokenExpires,
@@ -445,6 +477,7 @@ export default class User {
       passwordIsExpired: this.passwordIsExpired,
       firstName: this.firstName,
       lastName: this.lastName,
+      theme: this.theme,
       homePage: this.homePage,
       hasActiveSession: this.hasActiveSession,
       tokenExpires: this.tokenExpires,

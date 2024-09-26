@@ -6,7 +6,11 @@ import { getConnection } from '../services/database.js';
 import logger from '../services/logger.js';
 import { IAudit } from '../apis/audit/AuditModel.js';
 
-export default (req: Request, res: Response, next: NextFunction) => {
+export default (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   const start = process.hrtime.bigint();
   const logRequest = async (conn: PoolConnection) => {
     const query = `

@@ -2,7 +2,9 @@ import { NextFunction, Request, Response } from 'express';
 import logger from '../services/logger.js';
 
 export const handle404 = (_req: Request, res: Response) => {
-  res.status(404).json({ message: 'The requested endpoint was not found' });
+  return res.status(404).json({
+    message: 'The requested endpoint was not found',
+  });
 };
 
 export const handle500 = (
@@ -12,6 +14,8 @@ export const handle500 = (
   next: NextFunction,
 ) => {
   logger.error(err);
-  res.status(500).json({ message: 'An internal error occurred' });
-  next();
+  res.status(500).json({
+    message: 'An internal error occurred',
+  });
+  return next();
 };

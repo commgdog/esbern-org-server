@@ -6,10 +6,14 @@ import mysql from 'mysql2/promise';
 import User from '../src/apis/user/UserModel.js';
 import Role, { Permission } from '../src/apis/role/RoleModel.js';
 import { generateExpiration } from '../src/apis/session/SessionModel.js';
+import Announcement from '../src/apis/announcement/AnnouncementModel.js';
+import dayjs from 'dayjs';
 
 function rand(length: number) {
   return crypto.randomBytes(length).toString('hex');
 }
+
+export const timeout = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const createConnection = async () => {
   return mysql.createConnection({
@@ -51,6 +55,16 @@ export const mockSession = async () => {
   user.roles = [role.roleId];
   await user.create();
   return { role, user };
+};
+
+export const mockAnnouncement = () => {
+  const dateTime = dayjs().format('YYYY-MM-DD 00:00:00');
+  return new Announcement({
+    announceAt: dateTime,
+    expiresAt: dateTime,
+    title: rand(20),
+    body: rand(20),
+  });
 };
 
 export const mockUser = (username?: string) => {

@@ -80,7 +80,7 @@ Note: `.env` files should **NOT** be used in production.
 * [@stylistic/eslint-plugin](https://www.npmjs.com/package/@stylistic/eslint-plugin) - Formatting rules for linting.
 * [@types/bcryptjs](https://www.npmjs.com/package/@types/bcryptjs) - Type definitions for `bcryptjs`.
 * [@types/cors](https://www.npmjs.com/package/@types/cors) - Type definitions for `cors`.
-* [@types/express](https://www.npmjs.com/package/@types/bcryptjs) - Type definitions for `express`.
+* [@types/express](https://www.npmjs.com/package/@types/express) - Type definitions for `express`.
 * [@types/node](https://www.npmjs.com/package/@types/node) - Type definitions for `node`.
 * [@types/prompt-sync](https://www.npmjs.com/package/@types/prompt-sync) - Type definitions for `prompt-sync`.
 * [@types/supertest](https://www.npmjs.com/package/@types/supertest) - Type definitions for `supertest`.
@@ -91,9 +91,6 @@ Note: `.env` files should **NOT** be used in production.
 * [typescript](https://www.npmjs.com/package/typescript) - Typescript core.
 * [typescript-eslint](https://www.npmjs.com/package/typescript-eslint) - Typescript tooling for linting.
 * [vitest](https://www.npmjs.com/package/vitest) - Testing framework.
-
-
-
 
 ## File Structure
 ```

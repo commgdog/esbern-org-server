@@ -58,6 +58,7 @@ const createUser = async (roleId: string | null) => {
   let formValidated = false;
   while (!formValidated) {
     const form = {
+      theme: 'light',
       homePage: 'dashboard',
       isInactive: false,
       roles: [roleId],

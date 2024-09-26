@@ -5,6 +5,8 @@ import User, {
   MAX_LOGIN_ATTEMPTS,
   PASSWORD_MIN_LENGTH,
 } from '../user/UserModel.js';
+import { ModelChange } from '../audit/AuditModel.js';
+import Announcement from '../announcement/AnnouncementModel.js';
 
 export const createSession = async (
   req: Request,
@@ -73,14 +75,21 @@ export const createSession = async (
     user.lastLoginAttemptAt = dayjs().format('YYYY-MM-DD HH:mm:ss');
     user.lifetimeLoginCount += 1;
     await user.update();
-    req.auditor.add(`User "${user.username}" logged in`, 'User', user.userId);
+    req.auditor.add(
+      `User "${user.username}" logged in`,
+      'User',
+      user.userId,
+    );
     return res.status(200).json(req.session.forClient());
   } catch (err) {
     return next(err);
   }
 };
 
-export const readSession = (req: Request, res: Response) => {
+export const readSession = (
+  req: Request,
+  res: Response,
+) => {
   res.status(200).json(req.session.forClient());
 };
 
@@ -93,7 +102,74 @@ export const deleteSession = async (
     await req.session.delete();
     res.status(200).json(new Session().forClient());
   } catch (err) {
-    next(err);
+    return next(err);
+  }
+};
+
+export const markAnnouncementAsRead = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const user = new User({
+      userId: req.session.userId,
+    });
+    if (!(await user.read())) {
+      return res.status(404).json({
+        message: 'User not found',
+      });
+    }
+    const announcement = new Announcement({
+      announcementId: req.body.announcementId,
+    });
+    if (!(await announcement.read())) {
+      return res.status(404).json({
+        message: 'Announcement not found',
+      });
+    }
+    await user.markAnnouncementAsRead(announcement.announcementId);
+    await req.session.read();
+    return res.status(200).json(req.session.forClient());
+  } catch (err) {
+    return next(err);
+  }
+};
+
+export const changeTheme = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const user = new User({
+      userId: req.session.userId,
+    });
+    if (req.body.theme !== 'light' && req.body.theme !== 'dark') {
+      return res.status(400).json({
+        message: 'Invalid theme',
+      });
+    }
+    if (!(await user.read())) {
+      return res.status(404).json({
+        message: 'User not found',
+      });
+    }
+    const changes = new ModelChange({ ...user });
+    user.theme = req.body.theme;
+    await user.update();
+    changes.after = { ...user };
+    req.auditor.add(
+      `User "${user.username}" updated`,
+      'User',
+      user.userId,
+      changes,
+    );
+    return res.status(200).json({
+      message: 'Theme changed',
+    });
+  } catch (err) {
+    return next(err);
   }
 };
 
@@ -155,7 +231,9 @@ export const changePassword = async (
       'User',
       user.userId,
     );
-    return res.status(200).json({ message: 'Password changed successfully' });
+    return res.status(200).json({
+      message: 'Password changed successfully',
+    });
   } catch (err) {
     return next(err);
   }

@@ -25,11 +25,15 @@ export default class Session {
 
   passwordIsExpired: boolean = false;
 
+  theme: string = 'light';
+
   homePage: string = 'dashboard';
 
   permissions: string[] = [];
 
   availableRoles: Record<string, string>[] = [];
+
+  announcements: object[] = [];
 
   isValid: boolean = false;
 
@@ -52,6 +56,7 @@ export default class Session {
         firstName,
         lastName,
         passwordIsExpired,
+        theme,
         homePage
       FROM
         users
@@ -75,6 +80,7 @@ export default class Session {
       Object.assign(this, rows[0]);
       this.permissions = await this.readPermissions();
       this.availableRoles = await this.readAvailableRoles();
+      this.announcements = await this.readAnnouncements();
       this.isValid = true;
       return true;
     }
@@ -114,6 +120,40 @@ export default class Session {
     return rows.map((row) => ({ value: row.roleId, title: row.name }));
   }
 
+  async readAnnouncements() {
+    const query = `
+      SELECT
+        a.announcementId,
+        announceAt,
+        title,
+        body,
+        (
+          SELECT
+            1
+          FROM
+            announcementsRead ar
+          WHERE
+            ar.userId = ?
+          AND
+            ar.announcementId = a.announcementId
+        ) AS isRead
+      FROM
+        announcements a
+      WHERE
+        expiresAt >= NOW()
+      AND
+        announceAt <= NOW()
+    `;
+    const values = [
+      this.userId,
+    ];
+    const [rows] = await execQuery<RowDataPacket[]>(query, values);
+    return rows.map((row) => {
+      row.isRead = !!row.isRead;
+      return row;
+    });
+  }
+
   async create() {
     if (!this.userId) {
       return;
@@ -134,7 +174,11 @@ export default class Session {
       WHERE
         userId = ?
     `;
-    const values = [this.lastToken, this.tokenExpires, this.userId];
+    const values = [
+      this.lastToken,
+      this.tokenExpires,
+      this.userId,
+    ];
     await execQuery(query, values);
   }
 
@@ -167,9 +211,11 @@ export default class Session {
         firstName: this.firstName,
         lastName: this.lastName,
         passwordIsExpired: this.passwordIsExpired,
+        theme: this.theme,
         homePage: this.homePage,
         permissions: this.permissions,
         availableRoles: this.availableRoles,
+        announcements: this.announcements,
       }),
     );
   }

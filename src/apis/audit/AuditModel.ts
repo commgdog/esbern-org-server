@@ -41,7 +41,10 @@ export class ModelChange {
         });
       }
     });
-    return JSON.stringify(changes);
+    if (changes.length) {
+      return JSON.stringify(changes);
+    }
+    return null;
   }
 }
 
@@ -79,7 +82,11 @@ interface IAuditRow {
 }
 
 export default class Audit {
-  static async getAudits(modelType: string, modelId: string) {
+  static async getAudits(
+    modelType: string,
+    modelId: string,
+    offset: string = '0',
+  ) {
     const query = `
       SELECT
         timestamp,
@@ -103,8 +110,16 @@ export default class Audit {
         modelId = ?
       ORDER BY
         timestamp DESC
+      LIMIT
+        20
+      OFFSET
+        ?
     `;
-    const values = [modelType, modelId];
+    const values = [
+      modelType,
+      modelId,
+      Number(offset),
+    ];
     const [rows] = await execQuery<IAuditRow[]>(query, values);
     return rows.map((row: IAuditRow) => {
       if (row.changes) {

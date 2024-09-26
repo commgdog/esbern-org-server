@@ -2,7 +2,7 @@ import { afterAll, afterEach, describe, it, expect } from 'vitest';
 import supertest from 'supertest';
 import dayjs from 'dayjs';
 import { uuidv7 } from 'uuidv7';
-import { mockDatabase, mockUser, resetDatabase } from '../mock.js';
+import { mockAnnouncement, mockDatabase, mockUser, resetDatabase } from '../mock.js';
 import { execQuery, initPool } from '../../src/services/database.js';
 import app from '../../src/services/express.js';
 import {
@@ -31,7 +31,7 @@ describe('POST /session', () => {
       .expect(401)
       .then((response) => {
         expect(response.body).toEqual({
-          message: 'Invalid credentials',
+          message: 'Invalid username or password',
           errors: ['username', 'password'],
         });
       });
@@ -70,7 +70,7 @@ describe('POST /session', () => {
       .expect(401)
       .then((response) => {
         expect(response.body).toEqual({
-          message: 'Invalid credentials',
+          message: 'Invalid username or password',
           errors: ['username', 'password'],
         });
       });
@@ -235,6 +235,120 @@ describe('DELETE /session', () => {
       .expect(200)
       .then(async (response) => {
         expect(response.body).toEqual(new Session().forClient());
+      });
+  });
+});
+
+describe('POST /session/mark-announcement-read', () => {
+  it('should return 200 if the announcement was marked as ready', async () => {
+    const user = mockUser();
+    user.lastToken = uuidv7();
+    user.tokenExpires = generateExpiration();
+    await user.create();
+
+    const announcement = mockAnnouncement();
+    await announcement.create();
+
+    await supertest(app)
+      .post('/session/mark-announcement-read')
+      .set('Authorization', `Bearer ${user.lastToken}`)
+      .send({
+        announcementId: announcement.announcementId,
+      })
+      .expect(200)
+      .then(async (response) => {
+        expect(response.body).toEqual({
+          message: 'Announcement marked as read',
+        });
+      });
+  });
+});
+
+describe('POST /session/change-theme', () => {
+  it('should return 400 if an invalid theme is given', async () => {
+    const user = mockUser();
+    user.lastToken = uuidv7();
+    user.tokenExpires = generateExpiration();
+    await user.create();
+
+    await supertest(app)
+      .post('/session/change-theme')
+      .set('Authorization', `Bearer ${user.lastToken}`)
+      .send({
+        theme: 'unknown',
+      })
+      .expect(400)
+      .then(async (response) => {
+        expect(response.body).toEqual({
+          message: 'Invalid theme',
+        });
+      });
+  });
+
+  it('should return 200 if the theme was changed', async () => {
+    const user = mockUser();
+    user.lastToken = uuidv7();
+    user.tokenExpires = generateExpiration();
+    await user.create();
+
+    await supertest(app)
+      .post('/session/change-theme')
+      .set('Authorization', `Bearer ${user.lastToken}`)
+      .send({
+        theme: 'dark',
+      })
+      .expect(200)
+      .then(async (response) => {
+        expect(response.body).toEqual({
+          message: 'Theme changed',
+        });
+      });
+  });
+});
+
+describe('POST /session/change-password', () => {
+  it ('should return 400 if there are password errors', async () => {
+    const user = mockUser();
+    user.lastToken = uuidv7();
+    user.tokenExpires = generateExpiration();
+    await user.create();
+
+    await supertest(app)
+      .post('/session/change-password')
+      .set('Authorization', `Bearer ${user.lastToken}`)
+      .send({
+        currentPassword: 'password',
+        password: '',
+        passwordConfirm: '',
+      })
+      .expect(400)
+      .then(async (response) => {
+        expect(response.body).toEqual({
+          message: 'Password must be at least 5 characters',
+          errorFields: ['password'],
+        });
+      });
+  });
+
+  it ('should return 200 if the password was changed', async () => {
+    const user = mockUser();
+    user.lastToken = uuidv7();
+    user.tokenExpires = generateExpiration();
+    await user.create();
+
+    await supertest(app)
+      .post('/session/change-password')
+      .set('Authorization', `Bearer ${user.lastToken}`)
+      .send({
+        currentPassword: 'password',
+        password: 'newPassword',
+        passwordConfirm: 'newPassword',
+      })
+      .expect(200)
+      .then(async (response) => {
+        expect(response.body).toEqual({
+          message: 'Password changed successfully',
+        });
       });
   });
 });
