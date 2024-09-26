@@ -257,9 +257,12 @@ describe('POST /session/mark-announcement-read', () => {
       })
       .expect(200)
       .then(async (response) => {
-        expect(response.body).toEqual({
-          message: 'Announcement marked as read',
+        const session = new Session({
+          lastToken: user.lastToken,
         });
+        await session.read(false);
+
+        expect(response.body).toEqual(session.forClient());
       });
   });
 });

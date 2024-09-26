@@ -25,7 +25,7 @@
     "@stylistic/eslint-plugin": "2.8.0",
     "@types/bcryptjs": "2.4.6",
     "@types/cors": "2.8.17",
-    "@types/express": "5.0.0",
+    "@types/express": "4.17.21",
     "@types/node": "22.7.3",
     "@types/prompt-sync": "4.2.3",
     "@types/supertest": "6.0.2",
