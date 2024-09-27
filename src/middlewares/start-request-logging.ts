@@ -1,10 +1,10 @@
 import { NextFunction, Request, Response } from 'express';
 import { PoolConnection } from 'mysql2/promise';
-import dayjs from 'dayjs';
 import { uuidv7 } from 'uuidv7';
 import { getConnection } from '../services/database.js';
 import logger from '../services/logger.js';
 import { IAudit } from '../apis/audit/AuditModel.js';
+import datetime from '../services/datetime.js';
 
 export default (
   req: Request,
@@ -33,7 +33,7 @@ export default (
     const values = [
       req.requestId,
       req.session.userId,
-      dayjs().format('YYYY-MM-DD HH:mm:ss.SSS'),
+      datetime().format('YYYY-MM-DD HH:mm:ss.SSS'),
       req.session.lastToken,
       req.method,
       req.originalUrl.split('?')[0],

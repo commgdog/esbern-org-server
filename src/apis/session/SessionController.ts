@@ -1,5 +1,4 @@
 import { NextFunction, Request, Response } from 'express';
-import dayjs from 'dayjs';
 import Session from './SessionModel.js';
 import User, {
   MAX_LOGIN_ATTEMPTS,
@@ -7,6 +6,7 @@ import User, {
 } from '../user/UserModel.js';
 import { ModelChange } from '../audit/AuditModel.js';
 import Announcement from '../announcement/AnnouncementModel.js';
+import datetime from '../../services/datetime.js';
 
 export const createSession = async (
   req: Request,
@@ -34,7 +34,7 @@ export const createSession = async (
     }
     if (!user.verifyPassword(req.body.password)) {
       user.loginAttemptCount += 1;
-      user.lastLoginAttemptAt = dayjs().format('YYYY-MM-DD HH:mm:ss');
+      user.lastLoginAttemptAt = datetime().format('YYYY-MM-DD HH:mm:ss');
       await user.update();
       return res.status(401).json({
         message: 'Invalid username or password',
@@ -72,7 +72,7 @@ export const createSession = async (
     user.lastToken = req.session.lastToken;
     user.tokenExpires = req.session.tokenExpires;
     user.loginAttemptCount = 0;
-    user.lastLoginAttemptAt = dayjs().format('YYYY-MM-DD HH:mm:ss');
+    user.lastLoginAttemptAt = datetime().format('YYYY-MM-DD HH:mm:ss');
     user.lifetimeLoginCount += 1;
     await user.update();
     req.auditor.add(

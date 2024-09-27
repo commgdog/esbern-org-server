@@ -3,8 +3,8 @@ import supertest from 'supertest';
 import { mockAnnouncement, mockDatabase, mockSession, resetDatabase } from '../mock.js';
 import app from '../../src/services/express.js';
 import { execQuery, initPool } from '../../src/services/database.js';
-import dayjs from 'dayjs';
 import Announcement from '../../src/apis/announcement/AnnouncementModel.js';
+import datetime from '../../src/services/datetime.js';
 
 const database = await mockDatabase('announcement');
 initPool();
@@ -18,8 +18,8 @@ afterEach(async () => {
   await execQuery('DELETE FROM announcements WHERE 1');
 });
 
-const startDateTime = dayjs().format('YYYY-MM-DD 00:00:00');
-const endDateTime = dayjs().format('YYYY-MM-DD 00:00:00');
+const startDateTime = datetime().format('YYYY-MM-DD 10:05:00');
+const endDateTime = datetime().format('YYYY-MM-DD 10:10:00');
 
 describe('POST /announcement', () => {
   it('should return 401 if not authorized', async () => {

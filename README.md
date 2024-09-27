@@ -7,6 +7,7 @@ The server-side endpoints and logic for esbern.org.
 * MySQL compatible database (Tested on MariaDB 10)
 
 ## Installation
+
 #### Project
 ```
 # Clone the repository
@@ -18,6 +19,7 @@ cd esbern-org-server
 # Install dependencies
 npm i
 ```
+
 #### Database
 ```
 # Create the database
@@ -26,6 +28,7 @@ mysql -h <host> -u <user> -p -e "CREATE DATABASE <database>"
 # Create the tables
 mysql -h <host> -u <user> -p <database> < ./src/sql/create-tables.sql
 ```
+
 #### Hydrate
 ```
 npm run reset-administrator
@@ -104,6 +107,12 @@ Note: `.env` files should **NOT** be used in production.
     +-- integration - Integration tests
     +-- unit - Unit tests
 ```
+
+## Date and Time
+This project includes a wrapper utility for managing dates and times. There is a service wrapper in
+`src/services/datetime.ts` that you should utilize for date and time functionality. All date and time
+values on the server-side are in `UTC` whereas the client must translate from `UTC` to their respective
+timezone saved on their account.
 
 ## Database
 For the project to run, you must create a database and create the required tables. This project

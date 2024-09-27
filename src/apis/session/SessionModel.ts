@@ -1,12 +1,12 @@
-import dayjs from 'dayjs';
 import { RowDataPacket } from 'mysql2/promise';
 import { uuidv7 } from 'uuidv7';
 import { execQuery } from '../../services/database.js';
-
+import datetime from '../../services/datetime.js';
 const SESSION_TIMEOUT_LENGTH = 900;
 
-export const generateExpiration = () =>
-  dayjs().add(SESSION_TIMEOUT_LENGTH, 'second').format('YYYY-MM-DD HH:mm:ss');
+export const generateExpiration = () => datetime()
+  .add(SESSION_TIMEOUT_LENGTH, 'second')
+  .format('YYYY-MM-DD HH:mm:ss');
 
 export default class Session {
   lastToken: string | null = null;
@@ -24,6 +24,8 @@ export default class Session {
   lastName: string | null = null;
 
   passwordIsExpired: boolean = false;
+
+  timezone: string = 'UTC';
 
   theme: string = 'light';
 
@@ -56,6 +58,7 @@ export default class Session {
         firstName,
         lastName,
         passwordIsExpired,
+        timezone,
         theme,
         homePage
       FROM
@@ -65,9 +68,12 @@ export default class Session {
       AND
         lastToken = ?
       AND
-        tokenExpires > NOW()
+        tokenExpires > ?
     `;
-    const values = [this.lastToken];
+    const values = [
+      this.lastToken,
+      datetime().format('YYYY-MM-DD HH:mm:ss'),
+    ];
     const [rows] = await execQuery<RowDataPacket[]>(query, values);
     if (rows.length === 1) {
       if (touch) {
@@ -140,12 +146,15 @@ export default class Session {
       FROM
         announcements a
       WHERE
-        expiresAt >= NOW()
+        expiresAt >= ?
       AND
-        announceAt <= NOW()
+        announceAt <= ?
     `;
+    const currentTimestamp = datetime().format('YYYY-MM-DD HH:mm:ss');
     const values = [
       this.userId,
+      currentTimestamp,
+      currentTimestamp,
     ];
     const [rows] = await execQuery<RowDataPacket[]>(query, values);
     return rows.map((row) => {
@@ -211,6 +220,7 @@ export default class Session {
         firstName: this.firstName,
         lastName: this.lastName,
         passwordIsExpired: this.passwordIsExpired,
+        timezone: this.timezone,
         theme: this.theme,
         homePage: this.homePage,
         permissions: this.permissions,

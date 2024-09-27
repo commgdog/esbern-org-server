@@ -1,6 +1,5 @@
 import { afterAll, afterEach, describe, it, expect } from 'vitest';
 import supertest from 'supertest';
-import dayjs from 'dayjs';
 import { uuidv7 } from 'uuidv7';
 import { mockAnnouncement, mockDatabase, mockUser, resetDatabase } from '../mock.js';
 import { execQuery, initPool } from '../../src/services/database.js';
@@ -12,6 +11,7 @@ import {
 import Session, {
   generateExpiration,
 } from '../../src/apis/session/SessionModel.js';
+import datetime from '../../src/services/datetime.js';
 
 const database = await mockDatabase('session');
 initPool();
@@ -40,7 +40,7 @@ describe('POST /session', () => {
   it('should return 429 when the user has too many login attempts', async () => {
     const user = mockUser();
     user.loginAttemptCount = MAX_LOGIN_ATTEMPTS;
-    user.lastLoginAttemptAt = dayjs().format('YYYY-MM-DD HH:mm:ss');
+    user.lastLoginAttemptAt = datetime().format('YYYY-MM-DD HH:mm:ss');
     await user.create();
 
     await supertest(app)

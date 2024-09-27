@@ -1,9 +1,9 @@
 import bcryptjs from 'bcryptjs';
 import Joi from 'joi';
 import { PoolConnection, RowDataPacket } from 'mysql2/promise';
-import dayjs from 'dayjs';
 import { uuidv7 } from 'uuidv7';
 import { execQuery, getConnection } from '../../services/database.js';
+import datetime from '../../services/datetime.js';
 
 const { compareSync, hashSync } = bcryptjs;
 
@@ -26,6 +26,8 @@ export default class User {
   firstName: string | null = null;
 
   lastName: string | null = null;
+
+  timezone: string | null = 'UTC';
 
   theme: string | null = 'light';
 
@@ -94,6 +96,13 @@ export default class User {
       .min(1)
       .max(50)
       .required(),
+    timezone: Joi
+      .string()
+      .label('Timezone')
+      .trim()
+      .min(1)
+      .max(255)
+      .required(),
     theme: Joi
       .string()
       .label('Theme')
@@ -134,14 +143,17 @@ export default class User {
         email,
         firstName,
         lastName,
-        IF(tokenExpires AND tokenExpires > NOW(), 1, 0) AS hasActiveSession,
+        IF(tokenExpires AND tokenExpires > ?, 1, 0) AS hasActiveSession,
         isInactive
       FROM
         users
       ORDER BY
         firstName
     `;
-    const [rows] = await execQuery<RowDataPacket[]>(query);
+    const values = [
+      datetime().format('YYYY-MM-DD HH:mm:ss'),
+    ];
+    const [rows] = await execQuery<RowDataPacket[]>(query, values);
     return rows.map((row) => {
       row.hasActiveSession = !!row.hasActiveSession;
       row.isInactive = !!row.isInactive;
@@ -258,6 +270,7 @@ export default class User {
             passwordIsExpired,
             firstName,
             lastName,
+            timezone,
             theme,
             homePage,
             lastToken,
@@ -278,6 +291,7 @@ export default class User {
         this.passwordIsExpired,
         this.firstName,
         this.lastName,
+        this.timezone,
         this.theme,
         this.homePage,
         this.lastToken,
@@ -313,6 +327,7 @@ export default class User {
           passwordIsExpired = ?,
           firstName = ?,
           lastName = ?,
+          timezone = ?,
           theme = ?,
           homePage = ?,
           lastToken = ?,
@@ -331,6 +346,7 @@ export default class User {
         this.passwordIsExpired,
         this.firstName,
         this.lastName,
+        this.timezone,
         this.theme,
         this.homePage,
         this.lastToken,
@@ -462,7 +478,7 @@ export default class User {
     if (!this.lastLoginAttemptAt) {
       return false;
     }
-    const duration = dayjs().diff(this.lastLoginAttemptAt, 'second');
+    const duration = datetime().diff(this.lastLoginAttemptAt, 'second');
     return (
       this.loginAttemptCount >= MAX_LOGIN_ATTEMPTS
       && duration < LOGIN_TIMEOUT_LENGTH
@@ -477,6 +493,7 @@ export default class User {
       passwordIsExpired: this.passwordIsExpired,
       firstName: this.firstName,
       lastName: this.lastName,
+      timezone: this.timezone,
       theme: this.theme,
       homePage: this.homePage,
       hasActiveSession: this.hasActiveSession,

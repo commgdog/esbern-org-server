@@ -77,6 +77,7 @@ CREATE TABLE `users` (
   `passwordIsExpired` TINYINT(1) UNSIGNED NOT NULL DEFAULT 1,
   `firstName` VARCHAR(50) NOT NULL,
   `lastName` VARCHAR(50) NOT NULL,
+  `timezone` VARCHAR(255) NOT NULL DEFAULT 'UTC',
   `theme` VARCHAR(255) NOT NULL DEFAULT 'light',
   `homePage` VARCHAR(255) NOT NULL DEFAULT 'dashboard',
   `lastToken` UUID DEFAULT NULL,

@@ -7,7 +7,7 @@ import User from '../src/apis/user/UserModel.js';
 import Role, { Permission } from '../src/apis/role/RoleModel.js';
 import { generateExpiration } from '../src/apis/session/SessionModel.js';
 import Announcement from '../src/apis/announcement/AnnouncementModel.js';
-import dayjs from 'dayjs';
+import datetime from '../src/services/datetime.js';
 
 function rand(length: number) {
   return crypto.randomBytes(length).toString('hex');
@@ -58,7 +58,7 @@ export const mockSession = async () => {
 };
 
 export const mockAnnouncement = () => {
-  const dateTime = dayjs().format('YYYY-MM-DD 00:00:00');
+  const dateTime = datetime().format('YYYY-MM-DD 00:00:00');
   return new Announcement({
     announceAt: dateTime,
     expiresAt: dateTime,

@@ -1,8 +1,8 @@
 import Joi from 'joi';
-import dayjs from 'dayjs';
 import { RowDataPacket } from 'mysql2/promise';
 import { execQuery } from '../../services/database.js';
 import { uuidv7 } from 'uuidv7';
+import datetime from '../../services/datetime.js';
 
 export default class Announcement {
   announcementId: string | null = null;
@@ -98,18 +98,12 @@ export default class Announcement {
     if (
       this.announceAt
       && this.expiresAt
-      && dayjs(this.expiresAt).isBefore(this.announceAt)
+      && datetime(this.expiresAt).isBefore(datetime(this.announceAt))
     ) {
       errors.push({
         field: 'announceAt',
         message: 'Must announce before expiration',
       });
-    }
-    if (this.announceAt) {
-      this.announceAt = dayjs(this.announceAt).format('YYYY-MM-DD HH:mm:ss');
-    }
-    if (this.expiresAt) {
-      this.expiresAt = dayjs(this.expiresAt).format('YYYY-MM-DD HH:mm:ss');
     }
     return errors;
   }

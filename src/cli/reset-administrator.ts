@@ -58,6 +58,7 @@ const createUser = async (roleId: string | null) => {
   let formValidated = false;
   while (!formValidated) {
     const form = {
+      timezone: 'UTC',
       theme: 'light',
       homePage: 'dashboard',
       isInactive: false,
