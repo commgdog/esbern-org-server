@@ -136,7 +136,7 @@ This project utilizes `eslint` for linting. You can perform linting by running `
 Alternatively, if you are using WebStorm you can configure the IDE to perform the linting.
 
 This project utilizes `stylistic` for along with `eslint` for code formatting. Code formatting
-will be performed upon linting with `es run lint`.
+will be performed upon linting with `npm run lint`.
 
 To configure ESLint functionality in WebStorm, navigate to:
 
